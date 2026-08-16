@@ -3,7 +3,7 @@
   <h1>Docker Update Manager – Container Pilot</h1>
   <p><strong>Moderne deutsche Weboberfläche zur kontrollierten Prüfung und Installation von Docker-Image-Updates.</strong></p>
   <p>
-    <img alt="Version 0.4.0" src="https://img.shields.io/badge/Version-0.4.0-087f8c">
+    <img alt="Version 0.5.0" src="https://img.shields.io/badge/Version-0.5.0-087f8c">
     <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white">
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="Oberfläche Deutsch" src="https://img.shields.io/badge/Oberfläche-Deutsch-d97706">
@@ -15,7 +15,7 @@
 
 Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist, und bietet einen bewussten Wechsel über die Weboberfläche an.
 
-> **Projektstatus:** Version 0.4.0 befindet sich in aktiver Entwicklung. Vor dem produktiven Einsatz sollten Update- und Rollback-Verhalten mit den eingesetzten Containern, Netzwerken und Volumes getestet werden.
+> **Projektstatus:** Version 0.5.0 befindet sich in aktiver Entwicklung. Vor dem produktiven Einsatz sollten Update- und Rollback-Verhalten mit den eingesetzten Containern, Netzwerken und Volumes getestet werden.
 
 ## Warum ein eigener Docker Update Manager?
 
@@ -39,7 +39,7 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 | **Tag-Wechsel** | Existenz von `latest` prüfen und bei Bedarf bewusst auf diesen Tag wechseln |
 | **Rollback** | Fehlgeschlagene Container-Ersetzungen entfernen und den bisherigen Container wiederherstellen |
 | **Benutzer** | Administrator- und Viewer-Konten über die Weboberfläche verwalten |
-| **Ereignisse** | Prüf-, Update-, Fehler-, Benutzer- und Anmeldeereignisse nachvollziehen |
+| **Ereignisse** | Prüf-, Update-, Fehler-, Benutzer- und Anmeldeereignisse in einem eigenen Menüpunkt nachvollziehen |
 
 ## Architektur: Weboberfläche, Docker API und Registry
 

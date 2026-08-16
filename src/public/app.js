@@ -25,6 +25,12 @@ function showApp(session) {
   $('#loginView').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? 'Administrator' : 'Betrachter'}`;
   $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin';
+  showView('containers');
+}
+function showView(view) {
+  const events = view === 'events';
+  $('#containersView').hidden = events; $('#eventsView').hidden = !events;
+  $('#containersButton').classList.toggle('active', !events); $('#eventsButton').classList.toggle('active', events);
 }
 function confirmAction(title, text, fn) { $('#confirmTitle').textContent = title; $('#confirmText').textContent = text; pending = fn; $('#confirm').showModal(); }
 
@@ -35,6 +41,9 @@ $('#loginForm').onsubmit = async (event) => {
 };
 $('#logout').onclick = async () => { await api('/api/logout', { method: 'POST', body: '{}' }); showLogin(); };
 $('#scan').onclick = async () => { await api('/api/scan', { method: 'POST', body: '{}' }); $('#notice').textContent = 'Prüfung gestartet …'; setTimeout(load, 2500); };
+$('#containersButton').onclick = () => showView('containers');
+$('#eventsButton').onclick = async () => { await load(); showView('events'); };
+$('#refreshEvents').onclick = load;
 $('#confirmGo').onclick = async () => {
   if (!pending) return; const fn = pending; pending = null;
   try { $('#notice').textContent = 'Aktion läuft …'; await fn(); $('#notice').textContent = 'Aktion erfolgreich.'; setTimeout(load, 1000); }
