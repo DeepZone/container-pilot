@@ -181,7 +181,11 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/')) return await api(req, res, url, session);
     const requested = url.pathname === '/' ? 'index.html' : url.pathname.slice(1); const full = path.resolve(root, requested);
     if (!full.startsWith(`${root}${path.sep}`) && full !== path.join(root, 'index.html')) return res.writeHead(403).end();
-    const data = fs.readFileSync(full); const type = full.endsWith('.css') ? 'text/css' : full.endsWith('.js') ? 'text/javascript' : 'text/html';
+    const data = fs.readFileSync(full);
+    const type = full.endsWith('.css') ? 'text/css'
+      : full.endsWith('.js') ? 'text/javascript'
+        : full.endsWith('.svg') ? 'image/svg+xml'
+          : 'text/html';
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'", 'referrer-policy': 'no-referrer' }); res.end(data);
   } catch (error) { console.error(error); json(res, error.status || 500, { error: error.message }); }
 });
