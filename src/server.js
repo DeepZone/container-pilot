@@ -68,28 +68,41 @@ function requireCsrf(req, session) {
 function validUsername(value) { return /^[a-zA-Z0-9._-]{3,32}$/.test(value || ''); }
 function publicUser(username, user) { return { username, role: user.role, createdAt: user.createdAt }; }
 
-async function scanAll() {
-  if (scanRunning) return;
+async function scanAll(trigger = 'scheduled', actor = null) {
+  if (scanRunning) return false;
   scanRunning = true; const store = getStore();
+  const result = { trigger, actor, startedAt: new Date().toISOString(), completedAt: null, checked: 0, updatesFound: 0, installed: 0, errors: 0 };
   try {
     for (const c of await listContainers()) {
       if (c.labels['container-pilot.watch'] === 'false') continue;
+      result.checked += 1;
       try {
         const remote = await inspectRemote(c.image); const localDigest = await localImageDigest(c.imageId, c.image);
         store.scans[c.name] = { at: new Date().toISOString(), ...remote, localDigest, error: null };
         const policy = store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' };
-        if (store.settings.installUpdates && policy.auto && remote.currentDigest && localDigest && remote.currentDigest !== localDigest) {
+        const updateAvailable = remote.currentDigest && localDigest && remote.currentDigest !== localDigest;
+        if (updateAvailable) result.updatesFound += 1;
+        if (store.settings.installUpdates && policy.auto && updateAvailable) {
           await replaceContainer(c.id, c.image);
           store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
+          result.installed += 1;
           addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
         }
       } catch (error) {
+        result.errors += 1;
         store.scans[c.name] = { at: new Date().toISOString(), error: error.message };
         addEvent({ type: 'scan-error', container: c.name, result: 'error', message: error.message });
       }
     }
-    store.lastScan = new Date().toISOString(); saveStore();
-  } finally { scanRunning = false; }
+  } catch (error) {
+    result.errors += 1; result.message = error.message;
+    addEvent({ type: 'scan-error', actor, result: 'error', message: error.message });
+  } finally {
+    result.completedAt = new Date().toISOString(); store.lastScan = result.completedAt; store.lastScanResult = result;
+    scanRunning = false; saveStore();
+    addEvent({ type: 'scan-complete', actor, result: result.errors ? 'warning' : 'success', message: `${result.checked} geprüft, ${result.updatesFound} Updates, ${result.installed} installiert, ${result.errors} Fehler` });
+  }
+  return true;
 }
 
 async function api(req, res, url, session) {
@@ -112,7 +125,7 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, nextScanAt, scanRunning, settings: store.settings, events: store.events, containers: containers.map(c => ({
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: store.settings, events: store.events, containers: containers.map(c => ({
       ...c,
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
@@ -124,7 +137,10 @@ async function api(req, res, url, session) {
       })(),
     })) });
   }
-  if (req.method === 'POST' && url.pathname === '/api/scan') { scanAll(); return json(res, 202, { ok: true }); }
+  if (req.method === 'POST' && url.pathname === '/api/scan') {
+    if (scanRunning) return json(res, 409, { error: 'Eine Prüfung läuft bereits' });
+    scanAll('manual', session.username); return json(res, 202, { ok: true });
+  }
   if (req.method === 'POST' && url.pathname === '/api/settings') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     const data = await body(req); const intervalMinutes = Number(data.intervalMinutes);

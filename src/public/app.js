@@ -5,6 +5,7 @@ let currentUser = null;
 let currentStatus = null;
 let pending = null;
 let authRevision = 0;
+let manualScanPending = false;
 
 async function api(path, options = {}) {
   const requestAuthRevision = authRevision;
@@ -40,7 +41,12 @@ $('#loginForm').onsubmit = async (event) => {
   catch (error) { $('#loginError').textContent = error.message; }
 };
 $('#logout').onclick = async () => { await api('/api/logout', { method: 'POST', body: '{}' }); showLogin(); };
-$('#scan').onclick = async () => { await api('/api/scan', { method: 'POST', body: '{}' }); $('#notice').textContent = 'Prüfung gestartet …'; setTimeout(load, 2500); };
+$('#scan').onclick = async () => {
+  try {
+    await api('/api/scan', { method: 'POST', body: '{}' }); manualScanPending = true;
+    $('#notice').textContent = 'Prüfung läuft …'; pollManualScan();
+  } catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+};
 $('#containersButton').onclick = () => showView('containers');
 $('#eventsButton').onclick = async () => { await load(); showView('events'); };
 $('#refreshEvents').onclick = load;
@@ -60,6 +66,9 @@ async function load() {
   const last = status.lastScan ? `Letzte Prüfung: ${new Date(status.lastScan).toLocaleString()}` : 'Noch nicht geprüft';
   const next = status.settings.enabled && status.nextScanAt ? `Nächste Prüfung: ${new Date(status.nextScanAt).toLocaleString()}` : 'Automatische Prüfung deaktiviert';
   $('#last').innerHTML = `${esc(last)}<br><small>${esc(next)}</small>`;
+  $('#scan').disabled = status.scanRunning; $('#scan').textContent = status.scanRunning ? 'Prüfung läuft …' : 'Jetzt prüfen';
+  const scan = status.lastScanResult;
+  $('#scanSummary').textContent = scan ? `Letztes Prüfergebnis: ${scan.checked} geprüft · ${scan.updatesFound} Updates gefunden · ${scan.installed} installiert · ${scan.errors} Fehler` : 'Noch kein Prüfergebnis vorhanden.';
   $('#containerRows').innerHTML = status.containers.map((container) => {
     const update = updated(container); const canLatest = container.parsed.tag !== 'latest' && container.scan?.latestExists;
     const lastUpdate = container.lastUpdate ? new Date(container.lastUpdate.at).toLocaleString() : 'Noch keines';
@@ -70,6 +79,19 @@ async function load() {
   document.querySelectorAll('[data-policy]').forEach((element) => { element.onchange = () => api(`/api/containers/${element.dataset.policy}/policy`, { method: 'POST', body: JSON.stringify({ auto: element.checked }) }); });
   document.querySelectorAll('[data-update]').forEach((element) => { element.onclick = () => confirmAction('Update installieren', `${element.dataset.name} wird neu erstellt; bei Fehler erfolgt ein Rollback.`, () => api(`/api/containers/${element.dataset.update}/update`, { method: 'POST', body: '{}' })); });
   document.querySelectorAll('[data-latest]').forEach((element) => { element.onclick = () => confirmAction('Zu latest wechseln', `${element.dataset.name} wechselt auf latest. Das kann einen Versionssprung verursachen.`, () => api(`/api/containers/${element.dataset.latest}/update`, { method: 'POST', body: JSON.stringify({ target: 'latest' }) })); });
+  return status;
+}
+
+async function pollManualScan() {
+  if (!manualScanPending) return;
+  try {
+    const status = await load();
+    if (status.scanRunning) return setTimeout(pollManualScan, 1000);
+    manualScanPending = false; const scan = status.lastScanResult;
+    $('#notice').textContent = scan ? `Prüfung abgeschlossen: ${scan.checked} geprüft, ${scan.updatesFound} Updates gefunden, ${scan.installed} installiert, ${scan.errors} Fehler.` : 'Prüfung abgeschlossen.';
+  } catch (error) {
+    manualScanPending = false; $('#notice').textContent = `Prüfung fehlgeschlagen: ${error.message}`;
+  }
 }
 
 async function loadUsers() {
