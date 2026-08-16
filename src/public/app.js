@@ -4,19 +4,24 @@ let csrf = null;
 let currentUser = null;
 let currentStatus = null;
 let pending = null;
+let authRevision = 0;
 
 async function api(path, options = {}) {
+  const requestAuthRevision = authRevision;
   const headers = { 'content-type': 'application/json', ...(csrf ? { 'x-csrf-token': csrf } : {}), ...(options.headers || {}) };
   const response = await fetch(path, { ...options, headers });
   const data = await response.json().catch(() => ({}));
-  if (response.status === 401) { showLogin(); throw new Error(data.error || 'Anmeldung erforderlich'); }
+  if (response.status === 401) {
+    if (currentUser && requestAuthRevision === authRevision) showLogin();
+    throw new Error(data.error || 'Anmeldung erforderlich');
+  }
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
 }
 function setVersion(version) { document.querySelectorAll('[data-version]').forEach((element) => { element.textContent = version || '–'; }); }
-function showLogin() { $('#app').hidden = true; $('#loginView').hidden = false; csrf = null; currentUser = null; }
+function showLogin() { authRevision += 1; $('#app').hidden = true; $('#loginView').hidden = false; csrf = null; currentUser = null; }
 function showApp(session) {
-  csrf = session.csrf; currentUser = session.user; setVersion(session.version);
+  authRevision += 1; csrf = session.csrf; currentUser = session.user; setVersion(session.version);
   $('#loginView').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? 'Administrator' : 'Betrachter'}`;
   $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin';
@@ -78,5 +83,11 @@ $('#settingsForm').onsubmit = async (event) => {
 };
 
 api('/api/version').then((data) => setVersion(data.version)).catch(() => {});
-api('/api/session').then((session) => { showApp(session); load(); }).catch(() => showLogin());
+const startupAuthRevision = authRevision;
+api('/api/session').then((session) => {
+  if (authRevision !== startupAuthRevision) return;
+  showApp(session); load();
+}).catch(() => {
+  if (authRevision === startupAuthRevision) showLogin();
+});
 setInterval(() => { if (currentUser) load().catch(() => {}); }, 15000);

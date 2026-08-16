@@ -1,6 +1,6 @@
 # Container Pilot
 
-**Aktuelle Version: 0.3.0** · © 2026 NoiSens Media
+**Aktuelle Version: 0.3.1** · © 2026 NoiSens Media
 
 Eine eigenständige, kleine Watchtower-Alternative mit Weboberfläche.
 
