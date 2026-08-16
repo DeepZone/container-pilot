@@ -79,7 +79,9 @@ async function scanAll() {
         store.scans[c.name] = { at: new Date().toISOString(), ...remote, localDigest, error: null };
         const policy = store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' };
         if (store.settings.installUpdates && policy.auto && remote.currentDigest && localDigest && remote.currentDigest !== localDigest) {
-          await replaceContainer(c.id, c.image); addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
+          await replaceContainer(c.id, c.image);
+          store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
+          addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
         }
       } catch (error) {
         store.scans[c.name] = { at: new Date().toISOString(), error: error.message };
@@ -111,7 +113,15 @@ async function api(req, res, url, session) {
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
     return json(res, 200, { version: appVersion, lastScan: store.lastScan, nextScanAt, scanRunning, settings: store.settings, events: store.events, containers: containers.map(c => ({
-      ...c, parsed: parseImage(c.image), policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' }, scan: store.scans[c.name] || null,
+      ...c,
+      parsed: parseImage(c.image),
+      policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
+      scan: store.scans[c.name] || null,
+      lastUpdate: (() => {
+        if (store.lastUpdates?.[c.name]) return store.lastUpdates[c.name];
+        const event = store.events.find(item => item.container === c.name && ['auto-update', 'manual-update', 'switch-latest'].includes(item.type) && item.result === 'success');
+        return event ? { at: event.at, mode: event.type === 'auto-update' ? 'automatic' : 'manual', type: event.type, actor: event.actor || null } : null;
+      })(),
     })) });
   }
   if (req.method === 'POST' && url.pathname === '/api/scan') { scanAll(); return json(res, 202, { ok: true }); }
@@ -169,7 +179,9 @@ async function api(req, res, url, session) {
     const data = await body(req); const current = (await listContainers()).find(c => c.id.startsWith(updateMatch[1])); if (!current) return json(res, 404, { error: 'Container nicht gefunden' });
     const parsed = parseImage(current.image); const target = data.target === 'latest' ? `${parsed.registry === 'docker.io' ? '' : `${parsed.registry}/`}${parsed.repository}:latest` : current.image;
     if (data.target === 'latest' && !(await inspectRemote(current.image)).latestExists) return json(res, 409, { error: 'Tag latest existiert nicht' });
-    const result = await replaceContainer(current.id, target); addEvent({ type: data.target === 'latest' ? 'switch-latest' : 'manual-update', actor: session.username, container: current.name, image: target, result: 'success' });
+    const result = await replaceContainer(current.id, target); const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
+    getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
+    addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
     return json(res, 200, result);
   }
   return json(res, 404, { error: 'Nicht gefunden' });

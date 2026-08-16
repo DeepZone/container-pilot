@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const file = process.env.CP_STORE_FILE || '/data/state.json';
-let state = { policies: {}, scans: {}, events: [], users: {}, lastScan: null, settings: null };
+let state = { policies: {}, scans: {}, events: [], users: {}, lastScan: null, lastUpdates: {}, settings: null };
 
 export function loadStore() {
   try { state = { ...state, ...JSON.parse(fs.readFileSync(file, 'utf8')) }; } catch (e) {

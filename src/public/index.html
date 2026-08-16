@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Container Pilot</title>
-  <link rel="icon" href="logo.png?v=0.5.1" type="image/png">
-  <link rel="stylesheet" href="app.css?v=0.5.1">
+  <link rel="icon" href="logo.png?v=0.6.0" type="image/png">
+  <link rel="stylesheet" href="app.css?v=0.6.0">
 </head>
 <body>
   <section id="loginView" class="login">
     <form id="loginForm" class="panel">
-      <img class="loginLogo" src="logo.png?v=0.5.1" alt="Container Pilot Logo">
+      <img class="loginLogo" src="logo.png?v=0.6.0" alt="Container Pilot Logo">
       <h1>Container Pilot</h1><p>Docker-Updates unter Kontrolle</p>
       <label>Benutzername<input name="username" autocomplete="username" required></label>
       <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
@@ -20,14 +20,14 @@
   </section>
   <div id="app" hidden>
     <header>
-      <div class="brand"><img src="logo.png?v=0.5.1" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p>Docker-Updates unter Kontrolle</p></div></div>
+      <div class="brand"><img src="logo.png?v=0.6.0" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p>Docker-Updates unter Kontrolle</p></div></div>
       <nav><span id="who"></span><button id="containersButton" class="pageNav active">Container</button><button id="eventsButton" class="pageNav">Ereignisse</button><button id="settingsButton">Automatik</button><button id="usersButton">Benutzer</button><button id="logout">Abmelden</button><button id="scan" class="primary">Jetzt prüfen</button></nav>
     </header>
     <main>
       <section id="containersView">
         <section class="summary"><div><span id="total">–</span><small>Container</small></div><div><span id="running">–</span><small>Laufen</small></div><div><span id="updates">–</span><small>Updates</small></div><div><span id="latest">–</span><small>latest verfügbar</small></div><p id="last">Noch nicht geprüft</p></section>
         <p id="notice"></p>
-        <section class="tableWrap"><table><thead><tr><th>Container</th><th>Image</th><th>Status</th><th>Update</th><th>Automatik</th><th>Aktionen</th></tr></thead><tbody id="containerRows"></tbody></table></section>
+        <section class="tableWrap"><table><thead><tr><th>Container</th><th>Image</th><th>Status</th><th>Update</th><th>Letztes Update</th><th>Ausführung</th><th>Automatik</th><th>Aktionen</th></tr></thead><tbody id="containerRows"></tbody></table></section>
       </section>
       <section id="eventsView" hidden><div class="eventsPageHead"><div><h2>Ereignisse</h2><p class="muted">Anmeldungen, Prüfungen, Updates und Verwaltungsaktionen</p></div><button id="refreshEvents">Aktualisieren</button></div><div id="events" class="events"></div></section>
     </main>
@@ -45,6 +45,6 @@
       <button class="primary">Einstellungen speichern</button>
     </form>
   </dialog>
-  <script type="module" src="app.js?v=0.5.1"></script>
+  <script type="module" src="app.js?v=0.6.0"></script>
 </body>
 </html>
