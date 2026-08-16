@@ -21,7 +21,7 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 ![Container Pilot – Übersicht mit Containerstatus und Update-Prüfung](docs/container-pilot-overview.jpg)
 
-*Datenschutzbereinigte Übersicht mit Containerstatus, Update-Zustand und zusammengefasstem Prüfergebnis.*
+*Vollständige Containerübersicht mit Images, Laufzeitstatus, Update-Zustand, Ausführungsart und Automatik-Freigaben.*
 
 ## Warum ein eigener Docker Update Manager?
 
