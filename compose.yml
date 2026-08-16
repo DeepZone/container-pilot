@@ -1,7 +1,7 @@
 services:
   container-pilot:
     build: .
-    image: container-pilot:0.1.0
+    image: container-pilot:0.2.0
     container_name: container-pilot
     restart: unless-stopped
     ports:

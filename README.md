@@ -1,5 +1,7 @@
 # Container Pilot
 
+**Aktuelle Version: 0.2.0** · © 2026 NoiSens Media
+
 Eine eigenständige, kleine Watchtower-Alternative mit Weboberfläche.
 
 - stündliche Registry-Prüfung für Docker Hub und GHCR

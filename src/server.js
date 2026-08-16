@@ -8,8 +8,10 @@ import { loadStore, getStore, saveStore, addEvent } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
 
 loadStore();
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
+const sourceDir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(sourceDir, 'public');
 const port = Number(process.env.CP_PORT || 8080);
+const appVersion = JSON.parse(fs.readFileSync(path.join(sourceDir, '..', 'package.json'), 'utf8')).version;
 const initialUser = process.env.CP_ADMIN_USER || 'admin';
 const initialPassword = process.env.CP_ADMIN_PASSWORD_FILE ? fs.readFileSync(process.env.CP_ADMIN_PASSWORD_FILE, 'utf8').trim() : process.env.CP_ADMIN_PASSWORD;
 if (!initialPassword) throw new Error('Initiales Admin-Passwort fehlt');
@@ -62,6 +64,9 @@ async function scanAll() {
 }
 
 async function api(req, res, url, session) {
+  if (req.method === 'GET' && url.pathname === '/api/version') {
+    return json(res, 200, { version: appVersion });
+  }
   if (req.method === 'POST' && url.pathname === '/api/login') {
     if (!sameOrigin(req)) return json(res, 403, { error: 'Ungültiger Origin' });
     const data = await body(req); const user = getStore().users[data.username];
@@ -71,14 +76,14 @@ async function api(req, res, url, session) {
     return json(res, 200, { user: publicUser(data.username, user), csrf: created.csrf }, { 'set-cookie': sessionCookie(created.token) });
   }
   if (!session) return json(res, 401, { error: 'Anmeldung erforderlich' });
-  if (req.method === 'GET' && url.pathname === '/api/session') return json(res, 200, { user: { username: session.username, role: session.role }, csrf: session.csrf });
+  if (req.method === 'GET' && url.pathname === '/api/session') return json(res, 200, { user: { username: session.username, role: session.role }, csrf: session.csrf, version: appVersion });
   if (req.method === 'POST') requireCsrf(req, session);
   if (req.method === 'POST' && url.pathname === '/api/logout') {
     destroySession(session.token); return json(res, 200, { ok: true }, { 'set-cookie': clearSessionCookie() });
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { lastScan: store.lastScan, scanRunning, events: store.events, containers: containers.map(c => ({
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, scanRunning, events: store.events, containers: containers.map(c => ({
       ...c, parsed: parseImage(c.image), policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' }, scan: store.scans[c.name] || null,
     })) });
   }
