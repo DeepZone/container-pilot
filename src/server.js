@@ -185,7 +185,8 @@ const server = http.createServer(async (req, res) => {
     const type = full.endsWith('.css') ? 'text/css'
       : full.endsWith('.js') ? 'text/javascript'
         : full.endsWith('.svg') ? 'image/svg+xml'
-          : 'text/html';
+          : full.endsWith('.png') ? 'image/png'
+            : 'text/html';
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'", 'referrer-policy': 'no-referrer' }); res.end(data);
   } catch (error) { console.error(error); json(res, error.status || 500, { error: error.message }); }
 });
