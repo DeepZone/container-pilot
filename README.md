@@ -19,7 +19,7 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 ## Einblick
 
-![Container Pilot – Übersicht mit Containerstatus und Update-Prüfung](docs/container-pilot-overview.jpg)
+![Container Pilot – Übersicht mit Containerstatus und Update-Prüfung](docs/container-pilot-overview.png)
 
 *Vollständige Containerübersicht mit Images, Laufzeitstatus, Update-Zustand, Ausführungsart und Automatik-Freigaben.*
 
