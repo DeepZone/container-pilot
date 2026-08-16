@@ -17,6 +17,12 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 > **Projektstatus:** Version 0.7.0 befindet sich in aktiver Entwicklung. Vor dem produktiven Einsatz sollten Update- und Rollback-Verhalten mit den eingesetzten Containern, Netzwerken und Volumes getestet werden.
 
+## Einblick
+
+![Container Pilot – Übersicht mit Containerstatus und Update-Prüfung](docs/container-pilot-overview.jpg)
+
+*Datenschutzbereinigte Übersicht mit Containerstatus, Update-Zustand und zusammengefasstem Prüfergebnis.*
+
 ## Warum ein eigener Docker Update Manager?
 
 - **Zentrale Docker-Weboberfläche:** Containerstatus, Images, verfügbare Updates und Ereignisse an einem Ort einsehen
