@@ -20,6 +20,33 @@ if (!getStore().users[initialUser]) {
   saveStore();
 }
 let scanRunning = false;
+let scanTimer = null;
+let nextScanAt = null;
+
+function defaultSettings() {
+  return {
+    enabled: true,
+    intervalMinutes: Math.max(1, Number(process.env.CP_SCAN_INTERVAL_MINUTES || 60)),
+    installUpdates: true,
+  };
+}
+if (!getStore().settings) {
+  getStore().settings = defaultSettings();
+  saveStore();
+}
+
+function scheduleNextScan(delayMinutes = getStore().settings.intervalMinutes) {
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = null;
+  nextScanAt = null;
+  if (!getStore().settings.enabled) return;
+  const delay = Math.max(1, delayMinutes) * 60_000;
+  nextScanAt = new Date(Date.now() + delay).toISOString();
+  scanTimer = setTimeout(async () => {
+    await scanAll();
+    scheduleNextScan();
+  }, delay);
+}
 
 function json(res, status, data, headers = {}) {
   const payload = JSON.stringify(data);
@@ -51,7 +78,7 @@ async function scanAll() {
         const remote = await inspectRemote(c.image); const localDigest = await localImageDigest(c.imageId, c.image);
         store.scans[c.name] = { at: new Date().toISOString(), ...remote, localDigest, error: null };
         const policy = store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' };
-        if (policy.auto && remote.currentDigest && localDigest && remote.currentDigest !== localDigest) {
+        if (store.settings.installUpdates && policy.auto && remote.currentDigest && localDigest && remote.currentDigest !== localDigest) {
           await replaceContainer(c.id, c.image); addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
         }
       } catch (error) {
@@ -73,7 +100,7 @@ async function api(req, res, url, session) {
     if (!user || !verifyPassword(data.password || '', user.passwordHash)) return json(res, 401, { error: 'Benutzername oder Passwort falsch' });
     const created = createSession(data.username, user.role);
     addEvent({ type: 'login', actor: data.username, result: 'success' });
-    return json(res, 200, { user: publicUser(data.username, user), csrf: created.csrf }, { 'set-cookie': sessionCookie(created.token) });
+    return json(res, 200, { user: publicUser(data.username, user), csrf: created.csrf, version: appVersion }, { 'set-cookie': sessionCookie(created.token) });
   }
   if (!session) return json(res, 401, { error: 'Anmeldung erforderlich' });
   if (req.method === 'GET' && url.pathname === '/api/session') return json(res, 200, { user: { username: session.username, role: session.role }, csrf: session.csrf, version: appVersion });
@@ -83,11 +110,20 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, scanRunning, events: store.events, containers: containers.map(c => ({
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, nextScanAt, scanRunning, settings: store.settings, events: store.events, containers: containers.map(c => ({
       ...c, parsed: parseImage(c.image), policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' }, scan: store.scans[c.name] || null,
     })) });
   }
   if (req.method === 'POST' && url.pathname === '/api/scan') { scanAll(); return json(res, 202, { ok: true }); }
+  if (req.method === 'POST' && url.pathname === '/api/settings') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const data = await body(req); const intervalMinutes = Number(data.intervalMinutes);
+    if (!Number.isInteger(intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 10_080) return json(res, 400, { error: 'Intervall muss zwischen 1 und 10.080 Minuten liegen' });
+    getStore().settings = { enabled: data.enabled === true, intervalMinutes, installUpdates: data.installUpdates === true };
+    saveStore(); scheduleNextScan();
+    addEvent({ type: 'settings-changed', actor: session.username, result: 'success', message: `Intervall ${intervalMinutes} min` });
+    return json(res, 200, { settings: getStore().settings, nextScanAt });
+  }
   if (req.method === 'GET' && url.pathname === '/api/users') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     return json(res, 200, { users: Object.entries(getStore().users).map(([name, value]) => publicUser(name, value)) });
@@ -150,4 +186,7 @@ const server = http.createServer(async (req, res) => {
   } catch (error) { console.error(error); json(res, error.status || 500, { error: error.message }); }
 });
 server.listen(port, '0.0.0.0', () => console.log(`Container Pilot lauscht auf Port ${port}`));
-setTimeout(scanAll, 3_000); setInterval(scanAll, Math.max(5, Number(process.env.CP_SCAN_INTERVAL_MINUTES || 60)) * 60_000);
+setTimeout(async () => {
+  if (getStore().settings.enabled) await scanAll();
+  scheduleNextScan();
+}, 3_000);

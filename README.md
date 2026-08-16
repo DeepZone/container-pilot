@@ -1,10 +1,11 @@
 # Container Pilot
 
-**Aktuelle Version: 0.2.0** · © 2026 NoiSens Media
+**Aktuelle Version: 0.3.0** · © 2026 NoiSens Media
 
 Eine eigenständige, kleine Watchtower-Alternative mit Weboberfläche.
 
-- stündliche Registry-Prüfung für Docker Hub und GHCR
+- frei einstellbares automatisches Prüfintervall für Docker Hub und GHCR
+- wahlweise sofortige Installation gefundener Updates
 - Update-Richtlinie pro Container
 - manuelle und automatische Updates
 - Prüfung, ob `latest` existiert
@@ -23,7 +24,7 @@ chmod 600 secrets/admin_password
 docker compose up -d --build
 ```
 
-Die Oberfläche läuft standardmäßig auf Port `3080`. Automatische Updates sind aus Sicherheitsgründen zunächst pro Container zu aktivieren.
+Die Oberfläche läuft standardmäßig auf Port `3080`. Prüfintervall und automatische Installation werden unter „Automatik“ verwaltet. Zusätzlich muss die Automatik aus Sicherheitsgründen für jeden gewünschten Container freigegeben werden.
 
 Beim ersten Start wird der Benutzer aus `CP_ADMIN_USER` angelegt. Das Passwort aus dem Secret wird nur zur initialen Erstellung benötigt; gespeichert wird ausschließlich ein gesalzener scrypt-Hash. Weitere Benutzer werden in der Weboberfläche verwaltet.
 

@@ -1,14 +1,82 @@
-const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let csrf=null,currentUser=null,pending=null;
-async function api(path,options={}){const headers={'content-type':'application/json',...(csrf?{'x-csrf-token':csrf}:{}),...(options.headers||{})};const r=await fetch(path,{...options,headers});const data=await r.json().catch(()=>({}));if(r.status===401){showLogin();throw new Error(data.error||'Anmeldung erforderlich')}if(!r.ok)throw new Error(data.error||r.statusText);return data}
-function setVersion(version){document.querySelectorAll('[data-version]').forEach(el=>el.textContent=version||'–')}function showLogin(){$('#app').hidden=true;$('#loginView').hidden=false;csrf=null;currentUser=null}function showApp(session){csrf=session.csrf;currentUser=session.user;setVersion(session.version);$('#loginView').hidden=true;$('#app').hidden=false;$('#who').textContent=`${currentUser.username} · ${currentUser.role==='admin'?'Administrator':'Betrachter'}`;$('#usersButton').hidden=currentUser.role!=='admin'}
-$('#loginForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);try{const s=await api('/api/login',{method:'POST',body:JSON.stringify(Object.fromEntries(f))});showApp(s);e.target.reset();$('#loginError').textContent='';load()}catch(err){$('#loginError').textContent=err.message}};
-$('#logout').onclick=async()=>{await api('/api/logout',{method:'POST',body:'{}'});showLogin()};$('#scan').onclick=async()=>{await api('/api/scan',{method:'POST',body:'{}'});$('#notice').textContent='Prüfung gestartet …';setTimeout(load,2500)};
-function confirmAction(title,text,fn){$('#confirmTitle').textContent=title;$('#confirmText').textContent=text;pending=fn;$('#confirm').showModal()}$('#confirmGo').onclick=async()=>{if(!pending)return;const fn=pending;pending=null;try{$('#notice').textContent='Aktion läuft …';await fn();$('#notice').textContent='Aktion erfolgreich.';setTimeout(load,1000)}catch(e){$('#notice').textContent=`Fehler: ${e.message}`}};
-async function load(){const s=await api('/api/status'),isAdmin=currentUser.role==='admin';const updated=c=>c.scan?.currentDigest&&c.scan?.localDigest&&c.scan.currentDigest!==c.scan.localDigest;$('#total').textContent=s.containers.length;$('#running').textContent=s.containers.filter(c=>c.state==='running').length;$('#updates').textContent=s.containers.filter(updated).length;$('#latest').textContent=s.containers.filter(c=>c.parsed.tag!=='latest'&&c.scan?.latestExists).length;$('#last').textContent=s.lastScan?`Letzte Prüfung: ${new Date(s.lastScan).toLocaleString()}`:'Noch nicht geprüft';
-$('#containerRows').innerHTML=s.containers.map(c=>{const update=updated(c),canLatest=c.parsed.tag!=='latest'&&c.scan?.latestExists;return `<tr><td><div class="name">${esc(c.name)}</div><small>${esc(c.id.slice(0,12))}</small></td><td class="image">${esc(c.image)}</td><td><span class="badge ${c.state==='running'?'good':'bad'}">${esc(c.state)}</span><br><small>${esc(c.status)}</small></td><td class="${c.scan?.error?'bad':update?'warn':'good'}">${c.scan?.error?esc(c.scan.error):update?'Verfügbar':'Aktuell'}</td><td><label class="toggle"><input type="checkbox" data-policy="${c.id}" ${c.policy.auto?'checked':''} ${isAdmin?'':'disabled'}> Aktiv</label></td><td><div class="actions">${update?`<button class="primary" data-update="${c.id}" data-name="${esc(c.name)}" ${isAdmin?'':'disabled'}>Update</button>`:''}${canLatest?`<button data-latest="${c.id}" data-name="${esc(c.name)}" ${isAdmin?'':'disabled'}>→ latest</button>`:''}</div></td></tr>`}).join('');
-$('#events').innerHTML=s.events.length?s.events.map(e=>`<div class="event"><strong>${esc(e.container||e.actor||e.type)}</strong> · ${esc(e.type)} · ${new Date(e.at).toLocaleString()} ${e.message?`<span class="bad">${esc(e.message)}</span>`:''}</div>`).join(''):'<p class="muted">Noch keine Ereignisse.</p>';
-document.querySelectorAll('[data-policy]').forEach(x=>x.onchange=()=>api(`/api/containers/${x.dataset.policy}/policy`,{method:'POST',body:JSON.stringify({auto:x.checked})}));document.querySelectorAll('[data-update]').forEach(x=>x.onclick=()=>confirmAction('Update installieren',`${x.dataset.name} wird neu erstellt; bei Fehler erfolgt ein Rollback.`,()=>api(`/api/containers/${x.dataset.update}/update`,{method:'POST',body:'{}'})));document.querySelectorAll('[data-latest]').forEach(x=>x.onclick=()=>confirmAction('Zu latest wechseln',`${x.dataset.name} wechselt auf latest. Das kann einen Versionssprung verursachen.`,()=>api(`/api/containers/${x.dataset.latest}/update`,{method:'POST',body:JSON.stringify({target:'latest'})})))}
-async function loadUsers(){const data=await api('/api/users');$('#userList').innerHTML=data.users.map(u=>`<div class="userRow"><strong>${esc(u.username)}</strong><span class="badge">${esc(u.role)}</span><button class="danger" data-delete-user="${esc(u.username)}" ${u.username===currentUser.username?'disabled':''}>Löschen</button></div>`).join('');document.querySelectorAll('[data-delete-user]').forEach(x=>x.onclick=()=>confirmAction('Benutzer löschen',`${x.dataset.deleteUser} wird gelöscht und aktive Sitzungen werden beendet.`,async()=>{await api(`/api/users/${encodeURIComponent(x.dataset.deleteUser)}`,{method:'DELETE',body:'{}'});await loadUsers()}))}
-$('#usersButton').onclick=async()=>{await loadUsers();$('#usersDialog').showModal()};document.querySelector('[data-close-users]').onclick=()=>$('#usersDialog').close();$('#newUser').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target));try{await api('/api/users',{method:'POST',body:JSON.stringify(f)});e.target.reset();await loadUsers()}catch(err){$('#notice').textContent=err.message}};
-api('/api/version').then(data=>setVersion(data.version)).catch(()=>{});api('/api/session').then(s=>{showApp(s);load()}).catch(()=>showLogin());setInterval(()=>{if(currentUser)load().catch(()=>{})},15000);
+const $ = (selector) => document.querySelector(selector);
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+let csrf = null;
+let currentUser = null;
+let currentStatus = null;
+let pending = null;
+
+async function api(path, options = {}) {
+  const headers = { 'content-type': 'application/json', ...(csrf ? { 'x-csrf-token': csrf } : {}), ...(options.headers || {}) };
+  const response = await fetch(path, { ...options, headers });
+  const data = await response.json().catch(() => ({}));
+  if (response.status === 401) { showLogin(); throw new Error(data.error || 'Anmeldung erforderlich'); }
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+function setVersion(version) { document.querySelectorAll('[data-version]').forEach((element) => { element.textContent = version || '–'; }); }
+function showLogin() { $('#app').hidden = true; $('#loginView').hidden = false; csrf = null; currentUser = null; }
+function showApp(session) {
+  csrf = session.csrf; currentUser = session.user; setVersion(session.version);
+  $('#loginView').hidden = true; $('#app').hidden = false;
+  $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? 'Administrator' : 'Betrachter'}`;
+  $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin';
+}
+function confirmAction(title, text, fn) { $('#confirmTitle').textContent = title; $('#confirmText').textContent = text; pending = fn; $('#confirm').showModal(); }
+
+$('#loginForm').onsubmit = async (event) => {
+  event.preventDefault(); const form = new FormData(event.target);
+  try { const session = await api('/api/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) }); showApp(session); event.target.reset(); $('#loginError').textContent = ''; load(); }
+  catch (error) { $('#loginError').textContent = error.message; }
+};
+$('#logout').onclick = async () => { await api('/api/logout', { method: 'POST', body: '{}' }); showLogin(); };
+$('#scan').onclick = async () => { await api('/api/scan', { method: 'POST', body: '{}' }); $('#notice').textContent = 'Prüfung gestartet …'; setTimeout(load, 2500); };
+$('#confirmGo').onclick = async () => {
+  if (!pending) return; const fn = pending; pending = null;
+  try { $('#notice').textContent = 'Aktion läuft …'; await fn(); $('#notice').textContent = 'Aktion erfolgreich.'; setTimeout(load, 1000); }
+  catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+};
+
+async function load() {
+  const status = await api('/api/status'); currentStatus = status; const isAdmin = currentUser.role === 'admin';
+  const updated = (container) => container.scan?.currentDigest && container.scan?.localDigest && container.scan.currentDigest !== container.scan.localDigest;
+  $('#total').textContent = status.containers.length;
+  $('#running').textContent = status.containers.filter((container) => container.state === 'running').length;
+  $('#updates').textContent = status.containers.filter(updated).length;
+  $('#latest').textContent = status.containers.filter((container) => container.parsed.tag !== 'latest' && container.scan?.latestExists).length;
+  const last = status.lastScan ? `Letzte Prüfung: ${new Date(status.lastScan).toLocaleString()}` : 'Noch nicht geprüft';
+  const next = status.settings.enabled && status.nextScanAt ? `Nächste Prüfung: ${new Date(status.nextScanAt).toLocaleString()}` : 'Automatische Prüfung deaktiviert';
+  $('#last').innerHTML = `${esc(last)}<br><small>${esc(next)}</small>`;
+  $('#containerRows').innerHTML = status.containers.map((container) => {
+    const update = updated(container); const canLatest = container.parsed.tag !== 'latest' && container.scan?.latestExists;
+    return `<tr><td><div class="name">${esc(container.name)}</div><small>${esc(container.id.slice(0, 12))}</small></td><td class="image">${esc(container.image)}</td><td><span class="badge ${container.state === 'running' ? 'good' : 'bad'}">${esc(container.state)}</span><br><small>${esc(container.status)}</small></td><td class="${container.scan?.error ? 'bad' : update ? 'warn' : 'good'}">${container.scan?.error ? esc(container.scan.error) : update ? 'Verfügbar' : 'Aktuell'}</td><td><label class="toggle"><input type="checkbox" data-policy="${container.id}" ${container.policy.auto ? 'checked' : ''} ${isAdmin ? '' : 'disabled'}> Aktiv</label></td><td><div class="actions">${update ? `<button class="primary" data-update="${container.id}" data-name="${esc(container.name)}" ${isAdmin ? '' : 'disabled'}>Update</button>` : ''}${canLatest ? `<button data-latest="${container.id}" data-name="${esc(container.name)}" ${isAdmin ? '' : 'disabled'}>→ latest</button>` : ''}</div></td></tr>`;
+  }).join('');
+  $('#events').innerHTML = status.events.length ? status.events.map((event) => `<div class="event"><strong>${esc(event.container || event.actor || event.type)}</strong> · ${esc(event.type)} · ${new Date(event.at).toLocaleString()} ${event.message ? `<span class="bad">${esc(event.message)}</span>` : ''}</div>`).join('') : '<p class="muted">Noch keine Ereignisse.</p>';
+  document.querySelectorAll('[data-policy]').forEach((element) => { element.onchange = () => api(`/api/containers/${element.dataset.policy}/policy`, { method: 'POST', body: JSON.stringify({ auto: element.checked }) }); });
+  document.querySelectorAll('[data-update]').forEach((element) => { element.onclick = () => confirmAction('Update installieren', `${element.dataset.name} wird neu erstellt; bei Fehler erfolgt ein Rollback.`, () => api(`/api/containers/${element.dataset.update}/update`, { method: 'POST', body: '{}' })); });
+  document.querySelectorAll('[data-latest]').forEach((element) => { element.onclick = () => confirmAction('Zu latest wechseln', `${element.dataset.name} wechselt auf latest. Das kann einen Versionssprung verursachen.`, () => api(`/api/containers/${element.dataset.latest}/update`, { method: 'POST', body: JSON.stringify({ target: 'latest' }) })); });
+}
+
+async function loadUsers() {
+  const data = await api('/api/users');
+  $('#userList').innerHTML = data.users.map((user) => `<div class="userRow"><strong>${esc(user.username)}</strong><span class="badge">${esc(user.role)}</span><button class="danger" data-delete-user="${esc(user.username)}" ${user.username === currentUser.username ? 'disabled' : ''}>Löschen</button></div>`).join('');
+  document.querySelectorAll('[data-delete-user]').forEach((element) => { element.onclick = () => confirmAction('Benutzer löschen', `${element.dataset.deleteUser} wird gelöscht und aktive Sitzungen werden beendet.`, async () => { await api(`/api/users/${encodeURIComponent(element.dataset.deleteUser)}`, { method: 'DELETE', body: '{}' }); await loadUsers(); }); });
+}
+$('#usersButton').onclick = async () => { await loadUsers(); $('#usersDialog').showModal(); };
+document.querySelector('[data-close-users]').onclick = () => $('#usersDialog').close();
+$('#newUser').onsubmit = async (event) => { event.preventDefault(); const form = Object.fromEntries(new FormData(event.target)); try { await api('/api/users', { method: 'POST', body: JSON.stringify(form) }); event.target.reset(); await loadUsers(); } catch (error) { $('#notice').textContent = error.message; } };
+
+$('#settingsButton').onclick = () => {
+  const form = $('#settingsForm'); form.elements.enabled.checked = currentStatus.settings.enabled; form.elements.intervalMinutes.value = currentStatus.settings.intervalMinutes; form.elements.installUpdates.checked = currentStatus.settings.installUpdates; $('#settingsDialog').showModal();
+};
+document.querySelector('[data-close-settings]').onclick = () => $('#settingsDialog').close();
+$('#settingsForm').onsubmit = async (event) => {
+  event.preventDefault(); const form = event.target;
+  try {
+    await api('/api/settings', { method: 'POST', body: JSON.stringify({ enabled: form.elements.enabled.checked, intervalMinutes: Number(form.elements.intervalMinutes.value), installUpdates: form.elements.installUpdates.checked }) });
+    $('#settingsDialog').close(); $('#notice').textContent = 'Automatik-Einstellungen gespeichert.'; await load();
+  } catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+};
+
+api('/api/version').then((data) => setVersion(data.version)).catch(() => {});
+api('/api/session').then((session) => { showApp(session); load(); }).catch(() => showLogin());
+setInterval(() => { if (currentUser) load().catch(() => {}); }, 15000);
