@@ -146,4 +146,4 @@ Fehlerberichte und nachvollziehbare Verbesserungsvorschläge sind willkommen. Bi
 Copyright © 2026 NoiSens Media.
 
 Container Pilot ist unter der [MIT-Lizenz](LICENSE) veröffentlicht. Nutzung, Änderung und Weitergabe sind unter den Bedingungen der Lizenz gestattet. Die Software wird ohne Gewährleistung bereitgestellt.
-> ☕ Gefällt dir dieses Projekt? [Unterstütze die Weiterentwicklung mit einem Kaffee.](https://buymeacoffee.com/mail9l)
+<a href="https://buymeacoffee.com/mail9l"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Unterst%C3%BCtzen-FFDD00?logo=buymeacoffee&logoColor=000000"></a>
