@@ -1,6 +1,6 @@
 services:
   container-pilot:
-    image: ghcr.io/deepzone/container-pilot:0.9.0-rc.5
+    image: ghcr.io/deepzone/container-pilot:0.9.0-rc.6
     container_name: container-pilot
     restart: unless-stopped
     init: true

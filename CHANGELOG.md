@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0-rc.6
+
+- Rollback-Punkte können nach erfolgreicher Betriebsbeobachtung bewusst verworfen werden.
+- Beim Verwerfen wird auch das vorherige Image entfernt.
+- Images, die noch von einem laufenden oder gestoppten Container verwendet werden, sind vor dem Löschen geschützt.
+
 ## 0.9.0-rc.5
 
 - Eigene Release-Prüfung für Container Pilot über öffentliche GitHub Releases.

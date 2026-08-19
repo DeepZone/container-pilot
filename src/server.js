@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage } from './docker.js';
+import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage, removeUnusedImage } from './docker.js';
 import { inspectRemote } from './registry.js';
 import { loadStore, getStore, saveStore, addEvent } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
@@ -284,6 +284,21 @@ async function api(req, res, url, session) {
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
       addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
       return replaced;
+    });
+    return json(res, 200, result);
+  }
+  const discardRollbackMatch = url.pathname.match(/^\/api\/containers\/([a-f0-9]+)\/rollback\/discard$/);
+  if (req.method === 'POST' && discardRollbackMatch) {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const selected = (await listContainers()).find(c => c.id.startsWith(discardRollbackMatch[1])); if (!selected) return json(res, 404, { error: 'Container nicht gefunden' });
+    const result = await withContainerLock(selected.name, 'Rollback verwerfen', async () => {
+      const checkpoint = getStore().rollbacks?.[selected.name];
+      if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
+      const removed = await removeUnusedImage(checkpoint.image);
+      delete getStore().rollbacks[selected.name];
+      saveStore();
+      addEvent({ type: 'rollback-discarded', actor: session.username, container: selected.name, image: checkpoint.image, result: 'success', message: 'Rollback-Punkt und altes Image entfernt' });
+      return removed;
     });
     return json(res, 200, result);
   }

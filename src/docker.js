@@ -61,6 +61,18 @@ export async function tagImage(sourceImage, targetImage) {
   return dockerRequest('POST', `/images/${encodeURIComponent(sourceImage)}/tag?repo=${encodeURIComponent(repositoryName)}&tag=${encodeURIComponent(tag)}`);
 }
 
+export function assertImageUnused(imageId, containers) {
+  const users = containers.filter(container => container.imageId === imageId);
+  if (users.length) throw Object.assign(new Error(`Das alte Image wird noch von ${users.map(container => container.name).join(', ')} verwendet`), { status: 409 });
+}
+
+export async function removeUnusedImage(imageReference) {
+  const image = await dockerRequest('GET', `/images/${encodeURIComponent(imageReference)}/json`);
+  assertImageUnused(image.Id, await listContainers());
+  await dockerRequest('DELETE', `/images/${encodeURIComponent(image.Id)}?force=false&noprune=false`);
+  return { imageId: image.Id, removed: true };
+}
+
 export function digestReference(image, digest) {
   if (!digest) return null;
   const { registry, repository } = parseImage(image);

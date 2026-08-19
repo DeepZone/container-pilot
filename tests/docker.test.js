@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseImage, digestReference, validateReplacement, reconcileImageDefaults } from '../src/docker.js';
+import { parseImage, digestReference, validateReplacement, reconcileImageDefaults, assertImageUnused } from '../src/docker.js';
 
 test('parses short Docker Hub images', () => {
   assert.deepEqual(parseImage('redis:8.0'), {
@@ -46,4 +46,13 @@ test('preserves explicit command overrides across image variants', () => {
   );
   assert.deepEqual(result.Entrypoint, ['/custom-entrypoint']);
   assert.deepEqual(result.Cmd, ['serve', '--custom']);
+});
+
+test('protects rollback images still used by another container', () => {
+  assert.throws(() => assertImageUnused('sha256:old', [
+    { name: 'another-service', imageId: 'sha256:old' },
+  ]), /another-service/);
+  assert.doesNotThrow(() => assertImageUnused('sha256:old', [
+    { name: 'updated-service', imageId: 'sha256:new' },
+  ]));
 });
