@@ -138,15 +138,16 @@ export async function waitForContainerReady(id, {
   timeoutSeconds = healthTimeoutSeconds,
   graceSeconds = startupGraceSeconds,
   intervalMilliseconds = 1_000,
+  inspect = inspectContainer,
 } = {}) {
   const deadline = Date.now() + timeoutSeconds * 1_000;
-  let current = await inspectContainer(id);
+  let current = await inspect(id);
   if (!current.Config?.Healthcheck) {
     const initialRestartCount = current.RestartCount || 0;
     const graceDeadline = Date.now() + graceSeconds * 1_000;
     while (Date.now() < graceDeadline) {
       await delay(Math.min(intervalMilliseconds, Math.max(1, graceDeadline - Date.now())));
-      current = await inspectContainer(id);
+      current = await inspect(id);
       if (!current.State?.Running || (current.RestartCount || 0) > initialRestartCount) {
         throw new Error(current.State?.Error || `Container blieb während der ${graceSeconds}-Sekunden-Startprüfung nicht stabil`);
       }
@@ -154,7 +155,7 @@ export async function waitForContainerReady(id, {
     return { state: 'running', health: null };
   }
   while (Date.now() < deadline) {
-    current = await inspectContainer(id);
+    current = await inspect(id);
     if (!current.State?.Running) throw new Error(current.State?.Error || 'Container wurde während der Startprüfung beendet');
     const health = current.State.Health?.Status;
     if (health === 'healthy') return { state: 'running', health };
