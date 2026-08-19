@@ -1,13 +1,27 @@
-# Sicherheit
+# Security Policy
 
-## Sicherheitsmeldungen
+## Reporting a vulnerability
 
-Bitte veröffentliche vermutete Sicherheitslücken nicht zusammen mit Kennwörtern, Tokens, internen Adressen, privaten Image-Namen oder Zustandsdateien in einem öffentlichen Issue. Melde zunächst ausschließlich eine knappe, anonymisierte Beschreibung an den Projektbetreiber NoiSens Media.
+Do not disclose suspected vulnerabilities publicly before a fix is available. Use GitHub's private vulnerability reporting feature for this repository when available. If it is unavailable, open a minimal issue asking the maintainers for a private contact channel without including exploit details.
 
-## Vertrauensgrenze
+Never include passwords, session cookies, API tokens, registry credentials, internal addresses, private image names, complete state files, or unredacted logs in a public report.
 
-Container Pilot benötigt schreibenden Zugriff auf die Docker API, um Container zu ersetzen. Zugriff auf die Administratoroberfläche ist deshalb als privilegierter Zugriff auf den Docker-Host zu behandeln. Die Anwendung sollte nur in einem vertrauenswürdigen Verwaltungsnetz, per VPN oder hinter einem HTTPS-Reverse-Proxy erreichbar sein.
+Please provide privately:
 
-## Unterstützte Versionen
+- affected Container Pilot version
+- concise impact description
+- reproducible steps or proof of concept
+- required privileges and deployment assumptions
+- suggested mitigation, if known
 
-Sicherheitskorrekturen werden während der Release-Candidate-Phase ausschließlich für den jeweils neuesten Stand bereitgestellt.
+## Trust boundary
+
+Container Pilot has write access to the Docker API. Administrator access to Container Pilot must therefore be treated as privileged access to the Docker host. Deploy it only in a trusted management network, through a VPN, or behind an HTTPS reverse proxy with appropriate network restrictions.
+
+## Supported versions
+
+During the release-candidate phase, security fixes are provided for the latest published release candidate only.
+
+## Response expectations
+
+Maintainers will acknowledge a complete private report when operationally possible, assess severity, and coordinate disclosure after a fix or mitigation is available. This is a community project and does not currently offer a contractual response-time guarantee.
