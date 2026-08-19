@@ -165,6 +165,8 @@ npm run test:integration
 
 Die GitHub-Actions-Pipeline führt beide Teststufen sowie einen Image-Build aus.
 
+Veröffentlichte Releases werden erst nach erfolgreichen Tests als Multi-Arch-Images gebaut. `latest` und `stable` werden ausschließlich für stabile Releases verwendet; Builds aus `main` erscheinen zu Testzwecken als `edge` und `sha-*`. Details stehen im englischen [Release-Prozess](docs/releases.md).
+
 ## Hinweise und Einschränkungen
 
 - Der direkte Container-Ersatz verändert keine externe Compose-Datei. Ein späteres `docker compose up` kann einen über die Weboberfläche vorgenommenen Image- oder Tag-Wechsel wieder überschreiben.

@@ -80,6 +80,7 @@ Read [Security](docs/security.md), [Updates](docs/updates.md), and [Rollback](do
 - [Rollback behavior](docs/rollback.md)
 - [Reverse proxy setup](docs/reverse-proxy.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Release process](docs/releases.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 
@@ -93,9 +94,10 @@ Published multi-architecture images are available from:
 ghcr.io/deepzone/container-pilot
 ```
 
-- Versioned tags such as `0.9.0-rc.6` are immutable release references.
+- Complete version tags such as `0.9.0-rc.6` are fixed release references and must never be reused.
 - Release candidates use the `rc` channel once published by the release workflow.
 - `latest`, major, and minor aliases are reserved for stable releases.
+- Successful builds from `main` use the moving `edge` tag and a commit-specific `sha-*` tag. They are development builds, not releases.
 
 Supported platforms: `linux/amd64` and `linux/arm64`.
 
@@ -105,6 +107,7 @@ Supported platforms: `linux/amd64` and `linux/arm64`.
 git clone https://github.com/DeepZone/container-pilot.git
 cd container-pilot
 npm test
+docker compose -f compose.yml -f compose.dev.yml up --build
 ```
 
 The Docker integration suite creates isolated fixture containers, volumes, and networks:
