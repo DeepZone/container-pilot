@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseImage } from '../src/docker.js';
+import { parseImage, digestReference } from '../src/docker.js';
 
 test('parses short Docker Hub images', () => {
   assert.deepEqual(parseImage('redis:8.0'), {
@@ -16,4 +16,9 @@ test('parses GHCR images and tags', () => {
 
 test('removes a pinned digest for registry checks', () => {
   assert.equal(parseImage('valkey/valkey:9@sha256:abc').tag, '9');
+});
+
+test('builds immutable rollback references from local digests', () => {
+  assert.equal(digestReference('redis:latest', 'sha256:abc'), 'library/redis@sha256:abc');
+  assert.equal(digestReference('ghcr.io/example/app:v2', 'sha256:def'), 'ghcr.io/example/app@sha256:def');
 });

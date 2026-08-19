@@ -3,7 +3,7 @@
   <h1>Docker Update Manager – Container Pilot</h1>
   <p><strong>Moderne deutsche Weboberfläche zur kontrollierten Prüfung und Installation von Docker-Image-Updates.</strong></p>
   <p>
-    <img alt="Version 0.7.0" src="https://img.shields.io/badge/Version-0.7.0-087f8c">
+    <img alt="Version 0.8.0" src="https://img.shields.io/badge/Version-0.8.0-087f8c">
     <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white">
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="Oberfläche Deutsch" src="https://img.shields.io/badge/Oberfläche-Deutsch-d97706">
@@ -16,7 +16,7 @@
 
 Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist, und bietet einen bewussten Wechsel über die Weboberfläche an.
 
-> **Projektstatus:** Version 0.7.0 befindet sich in aktiver Entwicklung. Vor dem produktiven Einsatz sollten Update- und Rollback-Verhalten mit den eingesetzten Containern, Netzwerken und Volumes getestet werden.
+> **Projektstatus:** Version 0.8.0 befindet sich in aktiver Entwicklung. Vor dem produktiven Einsatz sollten Update- und Rollback-Verhalten mit den eingesetzten Containern, Netzwerken und Volumes getestet werden.
 
 ## Einblick
 
@@ -44,7 +44,7 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 | **Richtlinien** | Automatische Installation individuell pro Container freigeben oder sperren |
 | **Manuelle Updates** | Gefundene Updates unmittelbar installieren und Container mit bestehender Konfiguration neu erstellen |
 | **Tag-Wechsel** | Existenz von `latest` prüfen und bei Bedarf bewusst auf diesen Tag wechseln |
-| **Rollback** | Fehlgeschlagene Container-Ersetzungen entfernen und den bisherigen Container wiederherstellen |
+| **Rollback** | Bei sofortigem Startfehler automatisch den bisherigen Container wiederherstellen; nach erfolgreichen Updates einen manuellen Rollback auf den exakten vorherigen Image-Digest anbieten |
 | **Benutzer** | Administrator- und Viewer-Konten über die Weboberfläche verwalten |
 | **Ereignisse** | Prüf-, Update-, Fehler-, Benutzer- und Anmeldeereignisse in einem eigenen Menüpunkt nachvollziehen |
 

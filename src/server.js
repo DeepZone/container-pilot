@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listContainers, replaceContainer, parseImage, localImageDigest } from './docker.js';
+import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference } from './docker.js';
 import { inspectRemote } from './registry.js';
 import { loadStore, getStore, saveStore, addEvent } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
@@ -83,7 +83,9 @@ async function scanAll(trigger = 'scheduled', actor = null) {
         const updateAvailable = remote.currentDigest && localDigest && remote.currentDigest !== localDigest;
         if (updateAvailable) result.updatesFound += 1;
         if (store.settings.installUpdates && policy.auto && updateAvailable) {
+          const rollback = { image: digestReference(c.image, localDigest), displayImage: c.image, createdAt: new Date().toISOString() };
           await replaceContainer(c.id, c.image);
+          store.rollbacks[c.name] = rollback;
           store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
           result.installed += 1;
           addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
@@ -130,9 +132,10 @@ async function api(req, res, url, session) {
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
       scan: store.scans[c.name] || null,
+      rollback: store.rollbacks?.[c.name] || null,
       lastUpdate: (() => {
         if (store.lastUpdates?.[c.name]) return store.lastUpdates[c.name];
-        const event = store.events.find(item => item.container === c.name && ['auto-update', 'manual-update', 'switch-latest'].includes(item.type) && item.result === 'success');
+        const event = store.events.find(item => item.container === c.name && ['auto-update', 'manual-update', 'switch-latest', 'rollback'].includes(item.type) && item.result === 'success');
         return event ? { at: event.at, mode: event.type === 'auto-update' ? 'automatic' : 'manual', type: event.type, actor: event.actor || null } : null;
       })(),
     })) });
@@ -195,9 +198,27 @@ async function api(req, res, url, session) {
     const data = await body(req); const current = (await listContainers()).find(c => c.id.startsWith(updateMatch[1])); if (!current) return json(res, 404, { error: 'Container nicht gefunden' });
     const parsed = parseImage(current.image); const target = data.target === 'latest' ? `${parsed.registry === 'docker.io' ? '' : `${parsed.registry}/`}${parsed.repository}:latest` : current.image;
     if (data.target === 'latest' && !(await inspectRemote(current.image)).latestExists) return json(res, 409, { error: 'Tag latest existiert nicht' });
+    const currentDigest = await localImageDigest(current.imageId, current.image);
+    const rollback = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+    if (!rollback.image) return json(res, 409, { error: 'Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback-Punkt kann nicht erstellt werden' });
     const result = await replaceContainer(current.id, target); const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
+    getStore().rollbacks[current.name] = rollback;
     getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
     addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
+    return json(res, 200, result);
+  }
+  const rollbackMatch = url.pathname.match(/^\/api\/containers\/([a-f0-9]+)\/rollback$/);
+  if (req.method === 'POST' && rollbackMatch) {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const current = (await listContainers()).find(c => c.id.startsWith(rollbackMatch[1])); if (!current) return json(res, 404, { error: 'Container nicht gefunden' });
+    const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) return json(res, 409, { error: 'Kein Rollback-Punkt vorhanden' });
+    const currentDigest = await localImageDigest(current.imageId, current.image);
+    const reverseCheckpoint = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+    if (!reverseCheckpoint.image) return json(res, 409, { error: 'Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback kann nicht sicher durchgeführt werden' });
+    const result = await replaceContainer(current.id, checkpoint.image);
+    getStore().rollbacks[current.name] = reverseCheckpoint;
+    getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
+    addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
     return json(res, 200, result);
   }
   return json(res, 404, { error: 'Nicht gefunden' });

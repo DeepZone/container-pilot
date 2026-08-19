@@ -46,7 +46,15 @@ export async function localImageDigest(imageId, imageName) {
 export async function pullImage(image) {
   const { registry, repository, tag } = parseImage(image);
   const fromImage = registry === 'docker.io' ? repository : `${registry}/${repository}`;
-  return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(fromImage)}&tag=${encodeURIComponent(tag)}`);
+  const reference = image.includes('@') ? image.split('@')[1] : tag;
+  return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(fromImage)}&tag=${encodeURIComponent(reference)}`);
+}
+
+export function digestReference(image, digest) {
+  if (!digest) return null;
+  const { registry, repository } = parseImage(image);
+  const name = registry === 'docker.io' ? repository : `${registry}/${repository}`;
+  return `${name}@${digest}`;
 }
 
 function cleanHostConfig(host) {
