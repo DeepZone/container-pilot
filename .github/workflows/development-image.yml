@@ -1,12 +1,16 @@
-name: Release image
+name: Development image
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: read
+
+concurrency:
+  group: development-image-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -19,7 +23,7 @@ jobs:
           node-version: 24
       - run: npm test
       - run: npm run test:integration
-      - run: docker build -t container-pilot:release-test .
+      - run: docker build -t container-pilot:development-test .
 
   publish:
     needs: test
@@ -42,18 +46,14 @@ jobs:
         with:
           images: ghcr.io/deepzone/container-pilot
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
-            type=semver,pattern={{major}},enable=${{ !contains(github.ref_name, '-') }}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-            type=raw,value=stable,enable=${{ !contains(github.ref_name, '-') }}
-            type=raw,value=rc,enable=${{ contains(github.ref_name, '-') }}
+            type=raw,value=edge
+            type=sha,prefix=sha-
           labels: |
             org.opencontainers.image.title=Container Pilot
             org.opencontainers.image.description=Controlled Docker updates with health validation and rollback
             org.opencontainers.image.vendor=NoiSens Media
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.version=edge
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=MIT
       - uses: docker/build-push-action@v6

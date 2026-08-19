@@ -1,0 +1,7 @@
+services:
+  container-pilot:
+    image: container-pilot:development
+    build:
+      context: .
+      args:
+        VERSION: development

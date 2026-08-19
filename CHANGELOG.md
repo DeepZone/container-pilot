@@ -7,6 +7,12 @@
 - Added public issue forms, pull request template, release-note categories, repository topics, and GitHub Discussions.
 - Removed the outdated production screenshot and aligned copyright notices with NoiSens Media.
 - Release images now use `rc` only for release candidates and reserve `latest`, major, and minor aliases for stable releases.
+- Release image publication now depends on successful unit, integration, and Docker build tests.
+- Successful `main` builds publish multi-architecture `edge` and immutable `sha-*` development images.
+- Added explicit OCI source, version, revision, license, and vendor metadata plus reusable GitHub Actions build caches.
+- Added a local Compose development override while keeping the production Quickstart on published images.
+- Added a documented Semantic Versioning release process and tightened `.dockerignore` so local secrets and repository-only files never enter the build context.
+- Pull requests and branch builds now validate the image for both AMD64 and ARM64 after the test suite succeeds.
 
 ## 0.9.0-rc.6
 
