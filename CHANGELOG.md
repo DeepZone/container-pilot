@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added opt-in Watchtower label detection with a read-only preview, stale-preview protection, explicit per-container selection, and event-history auditing.
+- Added a static public project site with security, migration, installation, and product-positioning sections plus a GitHub Pages deployment workflow.
 - Added English and German UI localization with browser detection and a persistent language selector.
 - Added generic HTTPS webhook notifications for update, healthcheck, and rollback lifecycle events, with optional file-based bearer authentication.
 - Added Docker Secret-based credentials for private Docker Hub, GHCR, GitLab, and generic OCI registries without persisting credentials in application state.
