@@ -29,7 +29,7 @@ function showApp(session) {
   authRevision += 1; csrf = session.csrf; currentUser = session.user; setVersion(session.version);
   $('#loginView').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? t('admin') : t('viewRole')}`;
-  $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin'; $('#watchtowerButton').hidden = currentUser.role !== 'admin'; $('#selfUpdateButton').hidden = currentUser.role !== 'admin';
+  $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin'; $('#watchtowerButton').hidden = true; $('#selfUpdateButton').hidden = currentUser.role !== 'admin'; $('#scan').hidden = currentUser.role !== 'admin';
   showView('containers');
 }
 function showView(view) {
@@ -62,6 +62,7 @@ $('#confirmGo').onclick = async () => {
 
 async function load() {
   const status = await api('/api/status'); currentStatus = status; const isAdmin = currentUser.role === 'admin';
+  $('#watchtowerButton').hidden = !isAdmin || !status.watchtowerImport?.detected;
   const updated = (container) => container.scan?.currentDigest && container.scan?.localDigest && container.scan.currentDigest !== container.scan.localDigest;
   $('#total').textContent = status.containers.length;
   $('#running').textContent = status.containers.filter((container) => container.state === 'running').length;

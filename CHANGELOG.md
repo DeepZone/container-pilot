@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Hide the Watchtower import action unless an administrator has containers with supported Watchtower labels, and reorganize the application navigation into clearer page, administration, action, and account areas.
+
 ## 0.9.0-rc.7
 
 - Split CI into lint, unit, Docker integration, dependency security, CodeQL, and multi-architecture build stages; added weekly Dependabot coverage for npm, Docker, and GitHub Actions.
