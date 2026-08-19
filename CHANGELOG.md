@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a practical Watchtower migration guide with a conservative label mapping.
+- Added source-backed, neutral comparisons with archived Watchtower and active WUD.
+- Added an RC tester guide, reproducible scenario matrix, debug-data privacy guidance, and structured feedback form.
 - English README is now the primary project entry point; the German documentation remains available as `README.de.md`.
 - Added structured installation, configuration, security, update, rollback, reverse-proxy, troubleshooting, contribution, and roadmap documentation.
 - Added public issue forms, pull request template, release-note categories, repository topics, and GitHub Discussions.

@@ -1,0 +1,56 @@
+name: Release candidate feedback
+description: Report a structured Container Pilot RC test result
+title: "[RC feedback]: "
+labels:
+  - testing
+body:
+  - type: markdown
+    attributes:
+      value: Never include credentials, cookies, tokens, private image names, internal addresses, environment values, or complete state files.
+  - type: input
+    id: version
+    attributes:
+      label: Container Pilot version
+      placeholder: 0.9.0-rc.6
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Docker host
+      description: Operating system, architecture, Docker Engine, and Compose versions.
+    validations:
+      required: true
+  - type: dropdown
+    id: scenario
+    attributes:
+      label: Scenario
+      options:
+        - Successful update with healthcheck
+        - Failed healthcheck and automatic rollback
+        - Container without healthcheck
+        - Stopped container
+        - Fixed-tag update
+        - Switch to latest
+        - Manual rollback
+        - Configuration reconstruction
+        - Authentication or roles
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+      description: Include exact timestamps and sanitized event/error text.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I tested on a non-critical workload or had an application-aware backup.
+          required: true
+        - label: I removed credentials, private names, internal addresses, and environment values.
+          required: true
