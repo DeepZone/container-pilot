@@ -1,0 +1,14 @@
+services:
+  container-pilot:
+    environment:
+      CP_REGISTRY_CREDENTIALS_FILE: /run/secrets/registry_credentials
+      CP_WEBHOOK_TOKEN_FILE: /run/secrets/webhook_token
+    secrets:
+      - registry_credentials
+      - webhook_token
+
+secrets:
+  registry_credentials:
+    file: ./secrets/registry_credentials.json
+  webhook_token:
+    file: ./secrets/webhook_token

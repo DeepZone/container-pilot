@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -11,51 +11,55 @@
   <section id="loginView" class="login">
     <form id="loginForm" class="panel">
       <img class="loginLogo" src="logo.png?v=0.9.0-rc.6" alt="Container Pilot Logo">
-      <h1>Container Pilot</h1><p>Docker-Updates unter Kontrolle</p>
-      <label>Benutzername<input name="username" autocomplete="username" required></label>
-      <label>Passwort<input name="password" type="password" autocomplete="current-password" required></label>
-      <button class="primary">Anmelden</button><p id="loginError" class="bad"></p>
-      <p class="loginMeta">Version <span data-version>–</span><br>© 2026 NoiSens Media</p>
+      <h1>Container Pilot</h1><p data-i18n="tagline"></p>
+      <label><span data-i18n="username"></span><input name="username" autocomplete="username" required></label>
+      <label><span data-i18n="password"></span><input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" data-i18n="signIn"></button><p id="loginError" class="bad"></p>
+      <label class="language"><span data-i18n="language"></span><select data-language><option value="en">English</option><option value="de">Deutsch</option></select></label>
+      <p class="loginMeta"><span data-i18n="version"></span> <span data-version>–</span><br>© 2026 NoiSens Media</p>
     </form>
   </section>
   <div id="app" hidden>
     <header>
-      <div class="brand"><img src="logo.png?v=0.9.0-rc.6" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p>Docker-Updates unter Kontrolle</p></div></div>
-      <nav><span id="who"></span><button id="containersButton" class="pageNav active">Container</button><button id="eventsButton" class="pageNav">Ereignisse</button><button id="settingsButton">Automatik</button><button id="selfUpdateButton">Systemupdate</button><button id="usersButton">Benutzer</button><button id="logout">Abmelden</button><button id="scan" class="primary">Jetzt prüfen</button></nav>
+      <div class="brand"><img src="logo.png?v=0.9.0-rc.6" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p data-i18n="tagline"></p></div></div>
+      <nav><span id="who"></span><select data-language aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select><button id="containersButton" class="pageNav active" data-i18n="containers"></button><button id="eventsButton" class="pageNav" data-i18n="events"></button><button id="settingsButton" data-i18n="automation"></button><button id="selfUpdateButton" data-i18n="systemUpdate"></button><button id="usersButton" data-i18n="users"></button><button id="logout" data-i18n="signOut"></button><button id="scan" class="primary" data-i18n="scanNow"></button></nav>
     </header>
     <main>
       <section id="containersView">
-        <section class="summary"><div><span id="total">–</span><small>Container</small></div><div><span id="running">–</span><small>Laufen</small></div><div><span id="updates">–</span><small>Updates</small></div><div><span id="latest">–</span><small>latest verfügbar</small></div><p id="last">Noch nicht geprüft</p></section>
-        <p id="scanSummary" class="scanSummary">Noch kein Prüfergebnis vorhanden.</p>
+        <section class="summary"><div><span id="total">–</span><small data-i18n="containers"></small></div><div><span id="running">–</span><small data-i18n="running"></small></div><div><span id="updates">–</span><small data-i18n="updates"></small></div><div><span id="latest">–</span><small data-i18n="latestAvailable"></small></div><p id="last"></p></section>
+        <p id="scanSummary" class="scanSummary"></p>
         <p id="notice"></p>
-        <section class="tableWrap"><table><thead><tr><th>Container</th><th>Image</th><th>Status</th><th>Update</th><th>Letztes Update</th><th>Ausführung</th><th>Automatik</th><th>Aktionen</th></tr></thead><tbody id="containerRows"></tbody></table></section>
+        <section class="tableWrap"><table><thead><tr><th data-i18n="container"></th><th data-i18n="image"></th><th data-i18n="status"></th><th data-i18n="update"></th><th data-i18n="lastUpdate"></th><th data-i18n="execution"></th><th data-i18n="automation"></th><th data-i18n="actions"></th></tr></thead><tbody id="containerRows"></tbody></table></section>
       </section>
-      <section id="eventsView" hidden><div class="eventsPageHead"><div><h2>Ereignisse</h2><p class="muted">Anmeldungen, Prüfungen, Updates und Verwaltungsaktionen</p></div><button id="refreshEvents">Aktualisieren</button></div><div id="events" class="events"></div></section>
+      <section id="eventsView" hidden><div class="eventsPageHead"><div><h2 data-i18n="events"></h2><p class="muted" data-i18n="eventsDescription"></p></div><button id="refreshEvents" data-i18n="refresh"></button></div><div id="events" class="events"></div></section>
     </main>
     <footer><span>Container Pilot <strong>v<span data-version>–</span></strong></span><span>© 2026 NoiSens Media</span></footer>
   </div>
-  <dialog id="confirm"><form method="dialog"><h2 id="confirmTitle"></h2><p id="confirmText"></p><div class="dialogActions"><button value="cancel">Abbrechen</button><button id="confirmGo" value="ok" class="danger">Ausführen</button></div></form></dialog>
-  <dialog id="usersDialog"><div class="dialogHead"><h2>Benutzerverwaltung</h2><button data-close-users>Schließen</button></div><form id="newUser" class="userForm"><label>Benutzername<input name="username" required minlength="3"></label><label>Passwort<input name="password" type="password" required minlength="12"></label><label>Rolle<select name="role"><option value="viewer">Betrachter</option><option value="admin">Administrator</option></select></label><button class="primary">Anlegen</button></form><div id="userList"></div></dialog>
+  <dialog id="confirm"><form method="dialog"><h2 id="confirmTitle"></h2><p id="confirmText"></p><div class="dialogActions"><button value="cancel" data-i18n="cancel"></button><button id="confirmGo" value="ok" class="danger" data-i18n="execute"></button></div></form></dialog>
+  <dialog id="usersDialog"><div class="dialogHead"><h2 data-i18n="userManagement"></h2><button data-close-users data-i18n="close"></button></div><form id="newUser" class="userForm"><label><span data-i18n="username"></span><input name="username" required minlength="3"></label><label><span data-i18n="password"></span><input name="password" type="password" required minlength="12"></label><label><span data-i18n="role"></span><select name="role"><option value="viewer" data-i18n="viewer"></option><option value="admin" data-i18n="administrator"></option></select></label><button class="primary" data-i18n="create"></button></form><div id="userList"></div></dialog>
   <dialog id="settingsDialog">
-    <div class="dialogHead"><h2>Update-Automatik</h2><button type="button" data-close-settings>Schließen</button></div>
+    <div class="dialogHead"><h2 data-i18n="updateAutomation"></h2><button type="button" data-close-settings data-i18n="close"></button></div>
     <form id="settingsForm" class="settingsForm">
-      <label class="toggle"><input name="enabled" type="checkbox"> Automatisch nach Updates suchen</label>
-      <label>Prüfintervall in Minuten<input name="intervalMinutes" type="number" min="1" max="10080" required></label>
-      <label class="toggle"><input name="installUpdates" type="checkbox"> Gefundene Updates sofort installieren</label>
-      <p class="muted">Installiert werden nur Container, deren Automatik in der Containerliste aktiviert ist.</p>
-      <p class="warningBox"><strong>Wichtig:</strong> Ein Rollback stellt ausschließlich das vorherige Container-Image wieder her. Inhalte von Volumes, Datenbanken und bereits ausgeführte Migrationen werden nicht zurückgesetzt. Erstelle dafür anwendungsspezifische Backups.</p>
-      <button class="primary">Einstellungen speichern</button>
+      <label class="toggle"><input name="enabled" type="checkbox"> <span data-i18n="autoScan"></span></label>
+      <label><span data-i18n="scanInterval"></span><input name="intervalMinutes" type="number" min="1" max="10080" required></label>
+      <label class="toggle"><input name="installUpdates" type="checkbox"> <span data-i18n="installFound"></span></label>
+      <p class="muted" data-i18n="perContainerOnly"></p>
+      <label class="toggle"><input name="webhookEnabled" type="checkbox"> <span data-i18n="webhookEnabled"></span></label>
+      <label><span data-i18n="webhookUrl"></span><input name="webhookUrl" type="url" placeholder="https://hooks.example/events"></label>
+      <p class="muted" data-i18n="webhookHelp"></p>
+      <p class="warningBox" data-i18n="rollbackWarning"></p>
+      <button class="primary" data-i18n="saveSettings"></button>
     </form>
   </dialog>
   <dialog id="selfUpdateDialog">
-    <div class="dialogHead"><h2>Container Pilot aktualisieren</h2><button type="button" data-close-self-update>Schließen</button></div>
+    <div class="dialogHead"><h2 data-i18n="updateContainerPilot"></h2><button type="button" data-close-self-update data-i18n="close"></button></div>
     <div class="settingsForm">
-      <p>Installiert: <strong id="selfCurrentVersion">–</strong></p>
-      <p>Verfügbar: <strong id="selfAvailableVersion">Prüfung ausstehend</strong></p>
+      <p><span data-i18n="installed"></span>: <strong id="selfCurrentVersion">–</strong></p>
+      <p><span data-i18n="available"></span>: <strong id="selfAvailableVersion"></strong></p>
       <p id="selfUpdateState" class="muted"></p>
       <p id="selfReleaseNotes" class="muted"></p>
-      <p class="warningBox"><strong>Sicherheitsablauf:</strong> Das Ziel-Image wird geladen und von einem getrennten Helfer installiert. Der bisherige Container bleibt bis zum erfolgreichen Healthcheck erhalten und wird bei einem Fehler automatisch wiederhergestellt.</p>
-      <div class="dialogActions"><button id="checkSelfUpdate" type="button">Erneut prüfen</button><button id="installSelfUpdate" type="button" class="primary" disabled>Update installieren</button></div>
+      <p class="warningBox" data-i18n="selfUpdateSafety"></p>
+      <div class="dialogActions"><button id="checkSelfUpdate" type="button" data-i18n="checkAgain"></button><button id="installSelfUpdate" type="button" class="primary" disabled data-i18n="installUpdate"></button></div>
     </div>
   </dialog>
   <script type="module" src="app.js?v=0.9.0-rc.6"></script>
