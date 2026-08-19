@@ -22,6 +22,14 @@ docker compose up -d
 
 Open `http://YOUR-DOCKER-HOST:3080` and sign in as `admin` with the generated password. Change it after the first login.
 
+The Compose file defaults to the current release candidate until the first stable release exists. To select an explicit published image without editing the file:
+
+```bash
+CP_IMAGE=ghcr.io/deepzone/container-pilot:0.9.0-rc.6 docker compose up -d
+```
+
+After a stable release is published, select the stable channel with `CP_IMAGE=ghcr.io/deepzone/container-pilot:latest` and `CP_SELF_UPDATE_CHANNEL=stable`. The `latest` tag is never published for a release candidate.
+
 ## Bind to localhost
 
 For a reverse proxy running on the Docker host:
@@ -45,6 +53,16 @@ docker compose ps
 ```
 
 Do not delete the `container-pilot-data` volume during upgrades.
+
+## Local development build
+
+The production Compose file always references a published image. Developers can add the local build override:
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml up --build
+```
+
+The `edge` image published from `main` is intended for testing only. Prefer an immutable `sha-*` tag when reporting or reproducing a development-build problem.
 
 ## Uninstall
 
