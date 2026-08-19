@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.0-rc.7
+
 - Split CI into lint, unit, Docker integration, dependency security, CodeQL, and multi-architecture build stages; added weekly Dependabot coverage for npm, Docker, and GitHub Actions.
 - Added direct CSRF/same-origin and healthcheck/startup-stability unit tests.
 - Added opt-in Watchtower label detection with a read-only preview, stale-preview protection, explicit per-container selection, and event-history auditing.
