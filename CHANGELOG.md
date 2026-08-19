@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Split CI into lint, unit, Docker integration, dependency security, CodeQL, and multi-architecture build stages; added weekly Dependabot coverage for npm, Docker, and GitHub Actions.
+- Added direct CSRF/same-origin and healthcheck/startup-stability unit tests.
 - Added opt-in Watchtower label detection with a read-only preview, stale-preview protection, explicit per-container selection, and event-history auditing.
 - Added a static public project site with security, migration, installation, and product-positioning sections plus a GitHub Pages deployment workflow.
 - Added English and German UI localization with browser detection and a persistent language selector.

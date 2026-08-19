@@ -10,6 +10,7 @@ import { checkSelfUpdate, launchSelfUpdater, readSelfUpdateStatus } from './self
 import { sendWebhook, validateWebhookUrl } from './notifications.js';
 import { configuredRegistries } from './registry-auth.js';
 import { applyWatchtowerImport, watchtowerImportPreview } from './watchtower-import.js';
+import { requireCsrf, sameOrigin } from './http-security.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
@@ -100,13 +101,6 @@ async function body(req) {
   const chunks = []; let size = 0;
   for await (const chunk of req) { size += chunk.length; if (size > 64_000) throw new Error('Anfrage zu groß'); chunks.push(chunk); }
   return chunks.length ? JSON.parse(Buffer.concat(chunks).toString()) : {};
-}
-function sameOrigin(req) {
-  const origin = req.headers.origin;
-  return !origin || new URL(origin).host === req.headers.host;
-}
-function requireCsrf(req, session) {
-  if (!sameOrigin(req) || !session || req.headers['x-csrf-token'] !== session.csrf) throw Object.assign(new Error('Ungültiges CSRF-Token'), { status: 403 });
 }
 function validUsername(value) { return /^[a-zA-Z0-9._-]{3,32}$/.test(value || ''); }
 function publicUser(username, user) { return { username, role: user.role, createdAt: user.createdAt }; }

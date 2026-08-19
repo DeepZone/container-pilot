@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseImage, digestReference, validateReplacement, reconcileImageDefaults, assertImageUnused } from '../src/docker.js';
+import { parseImage, digestReference, validateReplacement, reconcileImageDefaults, assertImageUnused, waitForContainerReady } from '../src/docker.js';
 
 test('parses short Docker Hub images', () => {
   assert.deepEqual(parseImage('redis:8.0'), {
@@ -55,4 +55,17 @@ test('protects rollback images still used by another container', () => {
   assert.doesNotThrow(() => assertImageUnused('sha256:old', [
     { name: 'updated-service', imageId: 'sha256:new' },
   ]));
+});
+
+test('accepts a healthy replacement and rejects an unhealthy one', async () => {
+  const healthy = async () => ({ Config: { Healthcheck: {} }, State: { Running: true, Health: { Status: 'healthy' } } });
+  assert.deepEqual(await waitForContainerReady('demo', { timeoutSeconds: 1, intervalMilliseconds: 1, inspect: healthy }), { state: 'running', health: 'healthy' });
+  const unhealthy = async () => ({ Config: { Healthcheck: {} }, State: { Running: true, Health: { Status: 'unhealthy', Log: [{ Output: 'probe failed' }] } } });
+  await assert.rejects(waitForContainerReady('demo', { timeoutSeconds: 1, intervalMilliseconds: 1, inspect: unhealthy }), /probe failed/);
+});
+
+test('rejects restart loops during startup observation without a healthcheck', async () => {
+  let calls = 0;
+  const inspect = async () => ({ Config: {}, RestartCount: calls++, State: { Running: true } });
+  await assert.rejects(waitForContainerReady('demo', { graceSeconds: 0.003, intervalMilliseconds: 1, inspect }), /nicht stabil/);
 });

@@ -8,7 +8,24 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Check JavaScript syntax
+        run: find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Parse YAML
+        run: ruby -e 'require "yaml"; Dir[".github/**/*.yml", "compose*.yml"].flatten.each { |file| YAML.load_file(file) }'
+      - run: git diff --check
+
   test:
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -16,11 +33,38 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
+      - run: npm ci
       - run: npm test
+
+  integration-test:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
       - run: npm run test:integration
 
+  security-check:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+
   docker-build:
-    needs: test
+    needs: [integration-test, security-check]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
