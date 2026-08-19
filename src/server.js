@@ -2,10 +2,11 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference } from './docker.js';
+import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage } from './docker.js';
 import { inspectRemote } from './registry.js';
 import { loadStore, getStore, saveStore, addEvent } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
+import { checkSelfUpdate, launchSelfUpdater, readSelfUpdateStatus } from './self-update.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
@@ -26,6 +27,15 @@ const containerLocks = new Map();
 const loginAttempts = new Map();
 const LOGIN_WINDOW_MS = 15 * 60 * 1_000;
 const LOGIN_MAX_ATTEMPTS = 10;
+let selfUpdateCheck = null;
+let selfUpdateCheckedAt = 0;
+
+async function currentSelfUpdate(force = false) {
+  if (!force && selfUpdateCheck && Date.now() - selfUpdateCheckedAt < 5 * 60_000) return selfUpdateCheck;
+  selfUpdateCheck = await checkSelfUpdate(appVersion);
+  selfUpdateCheckedAt = Date.now();
+  return selfUpdateCheck;
+}
 
 async function withContainerLock(name, operation, action) {
   if (containerLocks.has(name)) throw Object.assign(new Error(`Für ${name} läuft bereits die Aktion „${containerLocks.get(name)}“`), { status: 409 });
@@ -160,7 +170,7 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: store.settings, events: store.events, containers: containers.map(c => ({
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: store.settings, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
       ...c,
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
@@ -173,6 +183,20 @@ async function api(req, res, url, session) {
         return event ? { at: event.at, mode: event.type === 'auto-update' ? 'automatic' : 'manual', type: event.type, actor: event.actor || null } : null;
       })(),
     })) });
+  }
+  if (req.method === 'GET' && url.pathname === '/api/self-update') {
+    try { return json(res, 200, { ...(await currentSelfUpdate(url.searchParams.get('force') === 'true')), status: readSelfUpdateStatus() }); }
+    catch (error) { return json(res, 502, { error: error.message, currentVersion: appVersion, status: readSelfUpdateStatus() }); }
+  }
+  if (req.method === 'POST' && url.pathname === '/api/self-update') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const status = readSelfUpdateStatus();
+    if (['queued', 'running'].includes(status?.state)) return json(res, 409, { error: 'Ein Container-Pilot-Update läuft bereits' });
+    const available = await currentSelfUpdate(true);
+    if (!available.release?.available) return json(res, 409, { error: 'Kein neueres Container-Pilot-Release verfügbar' });
+    const result = await launchSelfUpdater(available.release);
+    addEvent({ type: 'self-update-started', actor: session.username, container: 'container-pilot', image: available.release.image, result: 'success', message: `Update auf ${available.release.version} gestartet` });
+    return json(res, 202, result);
   }
   if (req.method === 'POST' && url.pathname === '/api/scan') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
@@ -253,11 +277,10 @@ async function api(req, res, url, session) {
     const result = await withContainerLock(selected.name, 'Rollback', async () => {
       const current = (await listContainers()).find(c => c.name === selected.name); if (!current) throw Object.assign(new Error('Container nicht mehr vorhanden'), { status: 404 });
       const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
-      const currentDigest = await localImageDigest(current.imageId, current.image);
-      const reverseCheckpoint = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
-      if (!reverseCheckpoint.image) throw Object.assign(new Error('Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback kann nicht sicher durchgeführt werden'), { status: 409 });
-      const replaced = await replaceContainer(current.id, checkpoint.image);
-      getStore().rollbacks[current.name] = reverseCheckpoint;
+      const displayTarget = checkpoint.displayImage && !checkpoint.displayImage.includes('@') ? checkpoint.displayImage : null;
+      if (displayTarget) await tagImage(checkpoint.image, displayTarget);
+      const replaced = await replaceContainer(current.id, displayTarget || checkpoint.image, { pull: false });
+      delete getStore().rollbacks[current.name];
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
       addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
       return replaced;

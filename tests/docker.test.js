@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseImage, digestReference, validateReplacement } from '../src/docker.js';
+import { parseImage, digestReference, validateReplacement, reconcileImageDefaults } from '../src/docker.js';
 
 test('parses short Docker Hub images', () => {
   assert.deepEqual(parseImage('redis:8.0'), {
@@ -27,4 +27,23 @@ test('rejects unsafe container replacement modes', () => {
   assert.throws(() => validateReplacement({ HostConfig: { AutoRemove: true } }), /AutoRemove/);
   assert.throws(() => validateReplacement({ HostConfig: { NetworkMode: 'container:abc' } }), /Netzwerkmodus/);
   assert.doesNotThrow(() => validateReplacement({ HostConfig: { AutoRemove: false, NetworkMode: 'bridge' } }));
+});
+
+test('uses target image commands when the current commands were inherited', () => {
+  const result = reconcileImageDefaults(
+    { Entrypoint: ['/entrypoint'], Cmd: ['nginx', '-g', 'daemon off;'] },
+    { Entrypoint: ['/entrypoint'], Cmd: ['nginx', '-g', 'daemon off;'] },
+    { Entrypoint: ['/entrypoint'], Cmd: ['apache2-foreground'] },
+  );
+  assert.deepEqual(result.Cmd, ['apache2-foreground']);
+});
+
+test('preserves explicit command overrides across image variants', () => {
+  const result = reconcileImageDefaults(
+    { Entrypoint: ['/custom-entrypoint'], Cmd: ['serve', '--custom'] },
+    { Entrypoint: ['/entrypoint'], Cmd: ['serve'] },
+    { Entrypoint: ['/new-entrypoint'], Cmd: ['apache2-foreground'] },
+  );
+  assert.deepEqual(result.Entrypoint, ['/custom-entrypoint']);
+  assert.deepEqual(result.Cmd, ['serve', '--custom']);
 });
