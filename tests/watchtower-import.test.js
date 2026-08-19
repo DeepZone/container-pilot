@@ -31,3 +31,12 @@ test('imports only explicitly selected preview entries', () => {
   assert.deepEqual(imported.map(entry => entry.name), ['enabled']);
   assert.deepEqual(policies, { enabled: { auto: true } });
 });
+
+test('reports no import when containers have no supported Watchtower labels', () => {
+  const preview = watchtowerImportPreview([
+    { id: 'f'.repeat(64), name: 'plain', image: 'demo:1', labels: { 'com.example.label': 'true' } },
+  ]);
+  assert.equal(preview.detected, 0);
+  assert.equal(preview.changes, 0);
+  assert.deepEqual(preview.entries, []);
+});
