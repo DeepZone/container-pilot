@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added English and German UI localization with browser detection and a persistent language selector.
+- Added generic HTTPS webhook notifications for update, healthcheck, and rollback lifecycle events, with optional file-based bearer authentication.
+- Added Docker Secret-based credentials for private Docker Hub, GHCR, GitLab, and generic OCI registries without persisting credentials in application state.
 - Added a practical Watchtower migration guide with a conservative label mapping.
 - Added source-backed, neutral comparisons with archived Watchtower and active WUD.
 - Added an RC tester guide, reproducible scenario matrix, debug-data privacy guidance, and structured feedback form.

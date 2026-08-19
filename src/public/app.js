@@ -1,3 +1,5 @@
+import { bindLanguage, locale, t } from './i18n.js';
+
 const $ = (selector) => document.querySelector(selector);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 let csrf = null;
@@ -15,7 +17,7 @@ async function api(path, options = {}) {
   const data = await response.json().catch(() => ({}));
   if (response.status === 401) {
     if (currentUser && requestAuthRevision === authRevision) showLogin();
-    throw new Error(data.error || 'Anmeldung erforderlich');
+    throw new Error(data.error || t('signIn'));
   }
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
@@ -25,7 +27,7 @@ function showLogin() { authRevision += 1; $('#app').hidden = true; $('#loginView
 function showApp(session) {
   authRevision += 1; csrf = session.csrf; currentUser = session.user; setVersion(session.version);
   $('#loginView').hidden = true; $('#app').hidden = false;
-  $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? 'Administrator' : 'Betrachter'}`;
+  $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? t('admin') : t('viewRole')}`;
   $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin'; $('#selfUpdateButton').hidden = currentUser.role !== 'admin';
   showView('containers');
 }
@@ -45,16 +47,16 @@ $('#logout').onclick = async () => { await api('/api/logout', { method: 'POST', 
 $('#scan').onclick = async () => {
   try {
     await api('/api/scan', { method: 'POST', body: '{}' }); manualScanPending = true;
-    $('#notice').textContent = 'Prüfung läuft …'; pollManualScan();
-  } catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+    $('#notice').textContent = t('scanning'); pollManualScan();
+  } catch (error) { $('#notice').textContent = t('error', { message: error.message }); }
 };
 $('#containersButton').onclick = () => showView('containers');
 $('#eventsButton').onclick = async () => { await load(); showView('events'); };
 $('#refreshEvents').onclick = load;
 $('#confirmGo').onclick = async () => {
   if (!pending) return; const fn = pending; pending = null;
-  try { $('#notice').textContent = 'Aktion läuft …'; await fn(); $('#notice').textContent = 'Aktion erfolgreich.'; setTimeout(load, 1000); }
-  catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+  try { $('#notice').textContent = t('actionRunning'); await fn(); $('#notice').textContent = t('actionSuccess'); setTimeout(load, 1000); }
+  catch (error) { $('#notice').textContent = t('error', { message: error.message }); }
 };
 
 async function load() {
@@ -64,29 +66,29 @@ async function load() {
   $('#running').textContent = status.containers.filter((container) => container.state === 'running').length;
   $('#updates').textContent = status.containers.filter(updated).length;
   $('#latest').textContent = status.containers.filter((container) => container.parsed.tag !== 'latest' && container.scan?.latestExists).length;
-  const last = status.lastScan ? `Letzte Prüfung: ${new Date(status.lastScan).toLocaleString()}` : 'Noch nicht geprüft';
-  const next = status.settings.enabled && status.nextScanAt ? `Nächste Prüfung: ${new Date(status.nextScanAt).toLocaleString()}` : 'Automatische Prüfung deaktiviert';
+  const last = status.lastScan ? t('lastScan', { time: new Date(status.lastScan).toLocaleString(locale()) }) : t('neverScanned');
+  const next = status.settings.enabled && status.nextScanAt ? t('nextScan', { time: new Date(status.nextScanAt).toLocaleString(locale()) }) : t('autoScanDisabled');
   $('#last').innerHTML = `${esc(last)}<br><small>${esc(next)}</small>`;
-  $('#scan').disabled = status.scanRunning; $('#scan').textContent = status.scanRunning ? 'Prüfung läuft …' : 'Jetzt prüfen';
+  $('#scan').disabled = status.scanRunning; $('#scan').textContent = status.scanRunning ? t('scanning') : t('scanNow');
   const scan = status.lastScanResult;
-  $('#scanSummary').textContent = scan ? `Letztes Prüfergebnis: ${scan.checked} geprüft · ${scan.updatesFound} Updates gefunden · ${scan.installed} installiert · ${scan.errors} Fehler` : 'Noch kein Prüfergebnis vorhanden.';
+  $('#scanSummary').textContent = scan ? t('scanResult', { checked: scan.checked, updates: scan.updatesFound, installed: scan.installed, errors: scan.errors }) : t('noScanResult');
   $('#containerRows').innerHTML = status.containers.map((container) => {
     const update = updated(container); const canLatest = container.parsed.tag !== 'latest' && container.scan?.latestExists;
     const busy = Boolean(container.operation);
-    const lastUpdate = container.lastUpdate ? new Date(container.lastUpdate.at).toLocaleString() : 'Noch keines';
-    const updateMode = container.lastUpdate?.mode === 'automatic' ? '<span class="badge good">Automatisch</span>' : container.lastUpdate ? '<span class="badge">Manuell</span>' : '–';
+    const lastUpdate = container.lastUpdate ? new Date(container.lastUpdate.at).toLocaleString(locale()) : t('noneYet');
+    const updateMode = container.lastUpdate?.mode === 'automatic' ? `<span class="badge good">${esc(t('automatic'))}</span>` : container.lastUpdate ? `<span class="badge">${esc(t('manual'))}</span>` : '–';
     const disabled = isAdmin && !busy ? '' : 'disabled';
-    const rollbackButton = container.rollback ? `<button class="rollback" data-rollback="${container.id}" data-name="${esc(container.name)}" data-image="${esc(container.rollback.displayImage)}" data-created="${esc(container.rollback.createdAt)}" ${disabled}>Rollback</button><button data-discard-rollback="${container.id}" data-name="${esc(container.name)}" data-image="${esc(container.rollback.displayImage)}" ${disabled}>Rollback verwerfen</button>` : '';
-    const currentTagAction = update ? `<button class="primary" data-update="${container.id}" data-name="${esc(container.name)}" data-tag="${esc(container.parsed.tag)}" ${disabled}>Tag ${esc(container.parsed.tag)} aktualisieren</button>` : '';
-    const latestAction = canLatest ? `<button data-latest="${container.id}" data-name="${esc(container.name)}" ${disabled}>Auf latest wechseln</button>` : '';
-    return `<tr><td><div class="name">${esc(container.name)}</div><small>${esc(container.id.slice(0, 12))}</small></td><td class="image">${esc(container.image)}</td><td><span class="badge ${container.state === 'running' ? 'good' : 'bad'}">${esc(container.state)}</span><br><small>${esc(container.status)}</small>${busy ? `<br><span class="badge warn">${esc(container.operation)}</span>` : ''}</td><td class="${container.scan?.error ? 'bad' : update ? 'warn' : 'good'}">${container.scan?.error ? esc(container.scan.error) : update ? `Update für Tag ${esc(container.parsed.tag)}` : 'Tag aktuell'}${canLatest ? '<br><small>latest als Alternative verfügbar</small>' : ''}</td><td class="lastUpdate">${esc(lastUpdate)}</td><td>${updateMode}</td><td><label class="toggle"><input type="checkbox" data-policy="${container.id}" ${container.policy.auto ? 'checked' : ''} ${disabled}> Aktiv</label></td><td><div class="actions">${currentTagAction}${latestAction}${rollbackButton}</div></td></tr>`;
+    const rollbackButton = container.rollback ? `<button class="rollback" data-rollback="${container.id}" data-name="${esc(container.name)}" data-image="${esc(container.rollback.displayImage)}" data-created="${esc(container.rollback.createdAt)}" ${disabled}>${esc(t('rollback'))}</button><button data-discard-rollback="${container.id}" data-name="${esc(container.name)}" data-image="${esc(container.rollback.displayImage)}" ${disabled}>${esc(t('discardRollback'))}</button>` : '';
+    const currentTagAction = update ? `<button class="primary" data-update="${container.id}" data-name="${esc(container.name)}" data-tag="${esc(container.parsed.tag)}" ${disabled}>${esc(t('updateTag', { tag: container.parsed.tag }))}</button>` : '';
+    const latestAction = canLatest ? `<button data-latest="${container.id}" data-name="${esc(container.name)}" ${disabled}>${esc(t('switchLatest'))}</button>` : '';
+    return `<tr><td><div class="name">${esc(container.name)}</div><small>${esc(container.id.slice(0, 12))}</small></td><td class="image">${esc(container.image)}</td><td><span class="badge ${container.state === 'running' ? 'good' : 'bad'}">${esc(container.state)}</span><br><small>${esc(container.status)}</small>${busy ? `<br><span class="badge warn">${esc(container.operation)}</span>` : ''}</td><td class="${container.scan?.error ? 'bad' : update ? 'warn' : 'good'}">${container.scan?.error ? esc(container.scan.error) : update ? esc(t('tagUpdate', { tag: container.parsed.tag })) : esc(t('tagCurrent'))}${canLatest ? `<br><small>${esc(t('latestAlternative'))}</small>` : ''}</td><td class="lastUpdate">${esc(lastUpdate)}</td><td>${updateMode}</td><td><label class="toggle"><input type="checkbox" data-policy="${container.id}" ${container.policy.auto ? 'checked' : ''} ${disabled}> ${esc(t('active'))}</label></td><td><div class="actions">${currentTagAction}${latestAction}${rollbackButton}</div></td></tr>`;
   }).join('');
-  $('#events').innerHTML = status.events.length ? status.events.map((event) => `<div class="event"><strong>${esc(event.container || event.actor || event.type)}</strong> · ${esc(event.type)} · ${new Date(event.at).toLocaleString()} ${event.message ? `<span class="bad">${esc(event.message)}</span>` : ''}</div>`).join('') : '<p class="muted">Noch keine Ereignisse.</p>';
+  $('#events').innerHTML = status.events.length ? status.events.map((event) => `<div class="event"><strong>${esc(event.container || event.actor || event.type)}</strong> · ${esc(event.type)} · ${new Date(event.at).toLocaleString(locale())} ${event.message ? `<span class="bad">${esc(event.message)}</span>` : ''}</div>`).join('') : `<p class="muted">${esc(t('noEvents'))}</p>`;
   document.querySelectorAll('[data-policy]').forEach((element) => { element.onchange = () => api(`/api/containers/${element.dataset.policy}/policy`, { method: 'POST', body: JSON.stringify({ auto: element.checked }) }); });
-  document.querySelectorAll('[data-update]').forEach((element) => { element.onclick = () => confirmAction('Bestehenden Tag aktualisieren', `${element.dataset.name} bleibt auf Tag ${element.dataset.tag}. Nur das aktuelle Image dieses Tags wird installiert und bis zur Betriebsbereitschaft geprüft.`, () => api(`/api/containers/${element.dataset.update}/update`, { method: 'POST', body: '{}' })); });
-  document.querySelectorAll('[data-latest]').forEach((element) => { element.onclick = () => confirmAction('Zu latest wechseln', `${element.dataset.name} wechselt auf latest. Das kann einen Versionssprung und irreversible Datenmigrationen verursachen. Vorher anwendungsspezifisches Backup erstellen.`, () => api(`/api/containers/${element.dataset.latest}/update`, { method: 'POST', body: JSON.stringify({ target: 'latest' }) })); });
-  document.querySelectorAll('[data-rollback]').forEach((element) => { element.onclick = () => confirmAction('Rollback durchführen', `${element.dataset.name} wird auf ${element.dataset.image} vom ${new Date(element.dataset.created).toLocaleString()} zurückgesetzt. Nur das Image wird zurückgesetzt – Volumes und Datenbanken bleiben unverändert.`, () => api(`/api/containers/${element.dataset.rollback}/rollback`, { method: 'POST', body: '{}' })); });
-  document.querySelectorAll('[data-discard-rollback]').forEach((element) => { element.onclick = () => confirmAction('Rollback verwerfen', `Der Rollback-Punkt für ${element.dataset.name} und das alte Image ${element.dataset.image} werden endgültig entfernt. Dies ist nur möglich, wenn kein anderer Container das Image verwendet.`, () => api(`/api/containers/${element.dataset.discardRollback}/rollback/discard`, { method: 'POST', body: '{}' })); });
+  document.querySelectorAll('[data-update]').forEach((element) => { element.onclick = () => confirmAction(t('updateTagTitle'), t('updateTagConfirm', { name: element.dataset.name, tag: element.dataset.tag }), () => api(`/api/containers/${element.dataset.update}/update`, { method: 'POST', body: '{}' })); });
+  document.querySelectorAll('[data-latest]').forEach((element) => { element.onclick = () => confirmAction(t('switchLatestTitle'), t('switchLatestConfirm', { name: element.dataset.name }), () => api(`/api/containers/${element.dataset.latest}/update`, { method: 'POST', body: JSON.stringify({ target: 'latest' }) })); });
+  document.querySelectorAll('[data-rollback]').forEach((element) => { element.onclick = () => confirmAction(t('rollbackTitle'), t('rollbackConfirm', { name: element.dataset.name, image: element.dataset.image, time: new Date(element.dataset.created).toLocaleString(locale()) }), () => api(`/api/containers/${element.dataset.rollback}/rollback`, { method: 'POST', body: '{}' })); });
+  document.querySelectorAll('[data-discard-rollback]').forEach((element) => { element.onclick = () => confirmAction(t('discardTitle'), t('discardConfirm', { name: element.dataset.name, image: element.dataset.image }), () => api(`/api/containers/${element.dataset.discardRollback}/rollback/discard`, { method: 'POST', body: '{}' })); });
   return status;
 }
 
@@ -96,53 +98,53 @@ async function pollManualScan() {
     const status = await load();
     if (status.scanRunning) return setTimeout(pollManualScan, 1000);
     manualScanPending = false; const scan = status.lastScanResult;
-    $('#notice').textContent = scan ? `Prüfung abgeschlossen: ${scan.checked} geprüft, ${scan.updatesFound} Updates gefunden, ${scan.installed} installiert, ${scan.errors} Fehler.` : 'Prüfung abgeschlossen.';
+    $('#notice').textContent = scan ? t('scanComplete', { checked: scan.checked, updates: scan.updatesFound, installed: scan.installed, errors: scan.errors }) : t('actionSuccess');
   } catch (error) {
-    manualScanPending = false; $('#notice').textContent = `Prüfung fehlgeschlagen: ${error.message}`;
+    manualScanPending = false; $('#notice').textContent = t('scanFailed', { message: error.message });
   }
 }
 
 async function loadUsers() {
   const data = await api('/api/users');
-  $('#userList').innerHTML = data.users.map((user) => `<div class="userRow"><strong>${esc(user.username)}</strong><span class="badge">${esc(user.role)}</span><button class="danger" data-delete-user="${esc(user.username)}" ${user.username === currentUser.username ? 'disabled' : ''}>Löschen</button></div>`).join('');
-  document.querySelectorAll('[data-delete-user]').forEach((element) => { element.onclick = () => confirmAction('Benutzer löschen', `${element.dataset.deleteUser} wird gelöscht und aktive Sitzungen werden beendet.`, async () => { await api(`/api/users/${encodeURIComponent(element.dataset.deleteUser)}`, { method: 'DELETE', body: '{}' }); await loadUsers(); }); });
+  $('#userList').innerHTML = data.users.map((user) => `<div class="userRow"><strong>${esc(user.username)}</strong><span class="badge">${esc(user.role)}</span><button class="danger" data-delete-user="${esc(user.username)}" ${user.username === currentUser.username ? 'disabled' : ''}>${esc(t('delete'))}</button></div>`).join('');
+  document.querySelectorAll('[data-delete-user]').forEach((element) => { element.onclick = () => confirmAction(t('deleteUserTitle'), t('deleteUserConfirm', { name: element.dataset.deleteUser }), async () => { await api(`/api/users/${encodeURIComponent(element.dataset.deleteUser)}`, { method: 'DELETE', body: '{}' }); await loadUsers(); }); });
 }
 $('#usersButton').onclick = async () => { await loadUsers(); $('#usersDialog').showModal(); };
 document.querySelector('[data-close-users]').onclick = () => $('#usersDialog').close();
 $('#newUser').onsubmit = async (event) => { event.preventDefault(); const form = Object.fromEntries(new FormData(event.target)); try { await api('/api/users', { method: 'POST', body: JSON.stringify(form) }); event.target.reset(); await loadUsers(); } catch (error) { $('#notice').textContent = error.message; } };
 
 $('#settingsButton').onclick = () => {
-  const form = $('#settingsForm'); form.elements.enabled.checked = currentStatus.settings.enabled; form.elements.intervalMinutes.value = currentStatus.settings.intervalMinutes; form.elements.installUpdates.checked = currentStatus.settings.installUpdates; $('#settingsDialog').showModal();
+  const form = $('#settingsForm'); form.elements.enabled.checked = currentStatus.settings.enabled; form.elements.intervalMinutes.value = currentStatus.settings.intervalMinutes; form.elements.installUpdates.checked = currentStatus.settings.installUpdates; form.elements.webhookEnabled.checked = currentStatus.settings.webhook?.enabled; form.elements.webhookUrl.value = currentStatus.settings.webhook?.url || ''; $('#settingsDialog').showModal();
 };
 document.querySelector('[data-close-settings]').onclick = () => $('#settingsDialog').close();
 $('#settingsForm').onsubmit = async (event) => {
   event.preventDefault(); const form = event.target;
   try {
-    await api('/api/settings', { method: 'POST', body: JSON.stringify({ enabled: form.elements.enabled.checked, intervalMinutes: Number(form.elements.intervalMinutes.value), installUpdates: form.elements.installUpdates.checked }) });
-    $('#settingsDialog').close(); $('#notice').textContent = 'Automatik-Einstellungen gespeichert.'; await load();
-  } catch (error) { $('#notice').textContent = `Fehler: ${error.message}`; }
+    await api('/api/settings', { method: 'POST', body: JSON.stringify({ enabled: form.elements.enabled.checked, intervalMinutes: Number(form.elements.intervalMinutes.value), installUpdates: form.elements.installUpdates.checked, webhook: { enabled: form.elements.webhookEnabled.checked, url: form.elements.webhookUrl.value } }) });
+    $('#settingsDialog').close(); $('#notice').textContent = t('settingsSaved'); await load();
+  } catch (error) { $('#notice').textContent = t('error', { message: error.message }); }
 };
 
 function describeSelfUpdateStatus(status) {
-  if (!status) return 'Noch kein Self-Update durchgeführt.';
-  if (status.state === 'queued') return `Update auf ${status.toVersion} wurde vorbereitet.`;
-  if (status.state === 'running') return `Update auf ${status.toVersion} läuft …`;
-  if (status.state === 'success') return `Letztes Systemupdate auf ${status.toVersion} war erfolgreich.`;
-  if (status.state === 'failed') return `Letztes Systemupdate ist fehlgeschlagen; der bisherige Container wurde wiederhergestellt. ${status.error || ''}`;
-  return String(status.state || 'Unbekannter Zustand');
+  if (!status) return t('selfNone');
+  if (status.state === 'queued') return t('selfQueued', { version: status.toVersion });
+  if (status.state === 'running') return t('selfRunning', { version: status.toVersion });
+  if (status.state === 'success') return t('selfSuccess', { version: status.toVersion });
+  if (status.state === 'failed') return t('selfFailed', { version: status.toVersion, error: status.error || '' });
+  return String(status.state || t('unknownState'));
 }
 
 async function loadSelfUpdate(force = false) {
-  $('#selfAvailableVersion').textContent = 'Prüfung läuft …';
+  $('#selfAvailableVersion').textContent = t('checkRunning');
   try {
     selfUpdateData = await api(`/api/self-update${force ? '?force=true' : ''}`);
     $('#selfCurrentVersion').textContent = selfUpdateData.currentVersion;
-    $('#selfAvailableVersion').textContent = selfUpdateData.release ? `${selfUpdateData.release.version}${selfUpdateData.release.available ? ' – Update verfügbar' : ' – aktuell'}` : 'Kein Release veröffentlicht';
+    $('#selfAvailableVersion').textContent = selfUpdateData.release ? `${selfUpdateData.release.version}${selfUpdateData.release.available ? ` – ${t('updateAvailable')}` : ` – ${t('current')}`}` : t('noRelease');
     $('#selfReleaseNotes').textContent = selfUpdateData.release?.notes || '';
     $('#selfUpdateState').textContent = describeSelfUpdateStatus(selfUpdateData.status);
     $('#installSelfUpdate').disabled = !selfUpdateData.release?.available || ['queued', 'running'].includes(selfUpdateData.status?.state);
   } catch (error) {
-    $('#selfAvailableVersion').textContent = 'Prüfung fehlgeschlagen';
+    $('#selfAvailableVersion').textContent = t('checkFailed');
     $('#selfUpdateState').textContent = error.message;
     $('#installSelfUpdate').disabled = true;
   }
@@ -153,14 +155,15 @@ document.querySelector('[data-close-self-update]').onclick = () => $('#selfUpdat
 $('#checkSelfUpdate').onclick = () => loadSelfUpdate(true);
 $('#installSelfUpdate').onclick = () => {
   if (!selfUpdateData?.release?.available) return;
-  confirmAction('Container Pilot aktualisieren', `Container Pilot wird auf ${selfUpdateData.release.version} aktualisiert. Die Oberfläche ist während Neustart und Healthcheck kurzzeitig nicht erreichbar.`, async () => {
+  confirmAction(t('selfInstallTitle'), t('selfInstallConfirm', { version: selfUpdateData.release.version }), async () => {
     await api('/api/self-update', { method: 'POST', body: '{}' });
     $('#selfUpdateDialog').close();
-    $('#notice').textContent = `Systemupdate auf ${selfUpdateData.release.version} gestartet. Die Seite wird nach dem Healthcheck neu geladen.`;
+    $('#notice').textContent = t('selfStarted', { version: selfUpdateData.release.version });
     setTimeout(() => window.location.reload(), 45_000);
   });
 };
 
+bindLanguage(() => { if (currentUser) { showApp({ csrf, user: currentUser, version: currentStatus?.version }); load().catch(() => {}); } });
 api('/api/version').then((data) => setVersion(data.version)).catch(() => {});
 const startupAuthRevision = authRevision;
 api('/api/session').then((session) => {
