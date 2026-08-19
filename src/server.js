@@ -22,6 +22,16 @@ if (!getStore().users[initialUser]) {
 let scanRunning = false;
 let scanTimer = null;
 let nextScanAt = null;
+const containerLocks = new Map();
+const loginAttempts = new Map();
+const LOGIN_WINDOW_MS = 15 * 60 * 1_000;
+const LOGIN_MAX_ATTEMPTS = 10;
+
+async function withContainerLock(name, operation, action) {
+  if (containerLocks.has(name)) throw Object.assign(new Error(`Für ${name} läuft bereits die Aktion „${containerLocks.get(name)}“`), { status: 409 });
+  containerLocks.set(name, operation);
+  try { return await action(); } finally { containerLocks.delete(name); }
+}
 
 function defaultSettings() {
   return {
@@ -67,6 +77,17 @@ function requireCsrf(req, session) {
 }
 function validUsername(value) { return /^[a-zA-Z0-9._-]{3,32}$/.test(value || ''); }
 function publicUser(username, user) { return { username, role: user.role, createdAt: user.createdAt }; }
+function loginKey(req) { return req.socket.remoteAddress || 'unknown'; }
+function loginAllowed(req) {
+  const key = loginKey(req); const now = Date.now();
+  const recent = (loginAttempts.get(key) || []).filter(at => now - at < LOGIN_WINDOW_MS);
+  loginAttempts.set(key, recent);
+  return recent.length < LOGIN_MAX_ATTEMPTS;
+}
+function recordFailedLogin(req) {
+  const key = loginKey(req); const attempts = loginAttempts.get(key) || [];
+  attempts.push(Date.now()); loginAttempts.set(key, attempts);
+}
 
 async function scanAll(trigger = 'scheduled', actor = null) {
   if (scanRunning) return false;
@@ -83,12 +104,19 @@ async function scanAll(trigger = 'scheduled', actor = null) {
         const updateAvailable = remote.currentDigest && localDigest && remote.currentDigest !== localDigest;
         if (updateAvailable) result.updatesFound += 1;
         if (store.settings.installUpdates && policy.auto && updateAvailable) {
-          const rollback = { image: digestReference(c.image, localDigest), displayImage: c.image, createdAt: new Date().toISOString() };
-          await replaceContainer(c.id, c.image);
-          store.rollbacks[c.name] = rollback;
-          store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
-          result.installed += 1;
-          addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
+          await withContainerLock(c.name, 'Automatisches Update', async () => {
+            const current = (await listContainers()).find(item => item.name === c.name);
+            if (!current) throw new Error('Container nicht mehr vorhanden');
+            const currentLocalDigest = await localImageDigest(current.imageId, current.image);
+            if (currentLocalDigest === remote.currentDigest) return;
+            const rollback = { image: digestReference(current.image, currentLocalDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+            if (!rollback.image) throw new Error('Rollback-Punkt konnte nicht erstellt werden');
+            await replaceContainer(current.id, current.image);
+            store.rollbacks[c.name] = rollback;
+            store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
+            result.installed += 1;
+            addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
+          });
         }
       } catch (error) {
         result.errors += 1;
@@ -113,8 +141,13 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'POST' && url.pathname === '/api/login') {
     if (!sameOrigin(req)) return json(res, 403, { error: 'Ungültiger Origin' });
+    if (!loginAllowed(req)) return json(res, 429, { error: 'Zu viele Anmeldeversuche. Bitte in 15 Minuten erneut versuchen.' });
     const data = await body(req); const user = getStore().users[data.username];
-    if (!user || !verifyPassword(data.password || '', user.passwordHash)) return json(res, 401, { error: 'Benutzername oder Passwort falsch' });
+    if (!user || !verifyPassword(data.password || '', user.passwordHash)) {
+      recordFailedLogin(req); addEvent({ type: 'login', actor: String(data.username || 'unbekannt').slice(0, 32), result: 'error', message: 'Fehlgeschlagene Anmeldung' });
+      return json(res, 401, { error: 'Benutzername oder Passwort falsch' });
+    }
+    loginAttempts.delete(loginKey(req));
     const created = createSession(data.username, user.role);
     addEvent({ type: 'login', actor: data.username, result: 'success' });
     return json(res, 200, { user: publicUser(data.username, user), csrf: created.csrf, version: appVersion }, { 'set-cookie': sessionCookie(created.token) });
@@ -133,6 +166,7 @@ async function api(req, res, url, session) {
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
       scan: store.scans[c.name] || null,
       rollback: store.rollbacks?.[c.name] || null,
+      operation: containerLocks.get(c.name) || null,
       lastUpdate: (() => {
         if (store.lastUpdates?.[c.name]) return store.lastUpdates[c.name];
         const event = store.events.find(item => item.container === c.name && ['auto-update', 'manual-update', 'switch-latest', 'rollback'].includes(item.type) && item.result === 'success');
@@ -141,6 +175,7 @@ async function api(req, res, url, session) {
     })) });
   }
   if (req.method === 'POST' && url.pathname === '/api/scan') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     if (scanRunning) return json(res, 409, { error: 'Eine Prüfung läuft bereits' });
     scanAll('manual', session.username); return json(res, 202, { ok: true });
   }
@@ -195,30 +230,38 @@ async function api(req, res, url, session) {
   const updateMatch = url.pathname.match(/^\/api\/containers\/([a-f0-9]+)\/update$/);
   if (req.method === 'POST' && updateMatch) {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
-    const data = await body(req); const current = (await listContainers()).find(c => c.id.startsWith(updateMatch[1])); if (!current) return json(res, 404, { error: 'Container nicht gefunden' });
-    const parsed = parseImage(current.image); const target = data.target === 'latest' ? `${parsed.registry === 'docker.io' ? '' : `${parsed.registry}/`}${parsed.repository}:latest` : current.image;
-    if (data.target === 'latest' && !(await inspectRemote(current.image)).latestExists) return json(res, 409, { error: 'Tag latest existiert nicht' });
-    const currentDigest = await localImageDigest(current.imageId, current.image);
-    const rollback = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
-    if (!rollback.image) return json(res, 409, { error: 'Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback-Punkt kann nicht erstellt werden' });
-    const result = await replaceContainer(current.id, target); const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
-    getStore().rollbacks[current.name] = rollback;
-    getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
-    addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
+    const data = await body(req); const selected = (await listContainers()).find(c => c.id.startsWith(updateMatch[1])); if (!selected) return json(res, 404, { error: 'Container nicht gefunden' });
+    const result = await withContainerLock(selected.name, data.target === 'latest' ? 'Wechsel auf latest' : 'Manuelles Update', async () => {
+      const current = (await listContainers()).find(c => c.name === selected.name); if (!current) throw Object.assign(new Error('Container nicht mehr vorhanden'), { status: 404 });
+      const parsed = parseImage(current.image); const target = data.target === 'latest' ? `${parsed.registry === 'docker.io' ? '' : `${parsed.registry}/`}${parsed.repository}:latest` : current.image;
+      if (data.target === 'latest' && !(await inspectRemote(current.image)).latestExists) throw Object.assign(new Error('Tag latest existiert nicht'), { status: 409 });
+      const currentDigest = await localImageDigest(current.imageId, current.image);
+      const rollback = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+      if (!rollback.image) throw Object.assign(new Error('Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback-Punkt kann nicht erstellt werden'), { status: 409 });
+      const replaced = await replaceContainer(current.id, target); const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
+      getStore().rollbacks[current.name] = rollback;
+      getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
+      addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
+      return replaced;
+    });
     return json(res, 200, result);
   }
   const rollbackMatch = url.pathname.match(/^\/api\/containers\/([a-f0-9]+)\/rollback$/);
   if (req.method === 'POST' && rollbackMatch) {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
-    const current = (await listContainers()).find(c => c.id.startsWith(rollbackMatch[1])); if (!current) return json(res, 404, { error: 'Container nicht gefunden' });
-    const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) return json(res, 409, { error: 'Kein Rollback-Punkt vorhanden' });
-    const currentDigest = await localImageDigest(current.imageId, current.image);
-    const reverseCheckpoint = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
-    if (!reverseCheckpoint.image) return json(res, 409, { error: 'Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback kann nicht sicher durchgeführt werden' });
-    const result = await replaceContainer(current.id, checkpoint.image);
-    getStore().rollbacks[current.name] = reverseCheckpoint;
-    getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
-    addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
+    const selected = (await listContainers()).find(c => c.id.startsWith(rollbackMatch[1])); if (!selected) return json(res, 404, { error: 'Container nicht gefunden' });
+    const result = await withContainerLock(selected.name, 'Rollback', async () => {
+      const current = (await listContainers()).find(c => c.name === selected.name); if (!current) throw Object.assign(new Error('Container nicht mehr vorhanden'), { status: 404 });
+      const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
+      const currentDigest = await localImageDigest(current.imageId, current.image);
+      const reverseCheckpoint = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+      if (!reverseCheckpoint.image) throw Object.assign(new Error('Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback kann nicht sicher durchgeführt werden'), { status: 409 });
+      const replaced = await replaceContainer(current.id, checkpoint.image);
+      getStore().rollbacks[current.name] = reverseCheckpoint;
+      getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
+      addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
+      return replaced;
+    });
     return json(res, 200, result);
   }
   return json(res, 404, { error: 'Nicht gefunden' });
@@ -236,7 +279,7 @@ const server = http.createServer(async (req, res) => {
         : full.endsWith('.svg') ? 'image/svg+xml'
           : full.endsWith('.png') ? 'image/png'
             : 'text/html';
-    res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'", 'referrer-policy': 'no-referrer' }); res.end(data);
+    res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'", 'permissions-policy': 'camera=(), microphone=(), geolocation=()', 'referrer-policy': 'no-referrer' }); res.end(data);
   } catch (error) { console.error(error); json(res, error.status || 500, { error: error.message }); }
 });
 server.listen(port, '0.0.0.0', () => console.log(`Container Pilot lauscht auf Port ${port}`));

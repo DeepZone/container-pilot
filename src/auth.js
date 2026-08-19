@@ -38,6 +38,10 @@ export function destroyUserSessions(username) {
 }
 
 export function sessionCookie(token) {
-  return `cp_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL / 1000}`;
+  const secure = process.env.CP_SECURE_COOKIE === 'true' ? '; Secure' : '';
+  return `cp_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL / 1000}${secure}`;
 }
-export function clearSessionCookie() { return 'cp_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0'; }
+export function clearSessionCookie() {
+  const secure = process.env.CP_SECURE_COOKIE === 'true' ? '; Secure' : '';
+  return `cp_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`;
+}

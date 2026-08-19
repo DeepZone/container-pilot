@@ -1,11 +1,12 @@
 {
   "name": "container-pilot",
-  "version": "0.8.0",
+  "version": "0.9.0-rc.1",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:integration": "CP_RUN_DOCKER_INTEGRATION=1 CP_HEALTH_TIMEOUT_SECONDS=20 CP_STARTUP_GRACE_SECONDS=1 node --test tests/integration/*.test.js"
   },
   "engines": { "node": ">=22" }
 }

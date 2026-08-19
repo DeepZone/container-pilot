@@ -1,6 +1,8 @@
 import http from 'node:http';
 
 const socketPath = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
+const healthTimeoutSeconds = Math.max(5, Number(process.env.CP_HEALTH_TIMEOUT_SECONDS || 120));
+const startupGraceSeconds = Math.max(1, Number(process.env.CP_STARTUP_GRACE_SECONDS || 5));
 
 export function dockerRequest(method, path, body, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -63,6 +65,66 @@ function cleanHostConfig(host) {
   return copy;
 }
 
+function cleanContainerConfig(config, oldId) {
+  const copy = structuredClone(config);
+  if (copy.Hostname === oldId.slice(0, 12)) delete copy.Hostname;
+  return copy;
+}
+
+function preserveMounts(hostConfig, mounts = []) {
+  const copy = structuredClone(hostConfig);
+  const configuredTargets = new Set([
+    ...(copy.Binds || []).map(bind => bind.split(':')[1]),
+    ...(copy.Mounts || []).map(mount => mount.Target),
+  ]);
+  copy.Mounts ||= [];
+  for (const mount of mounts) {
+    if (configuredTargets.has(mount.Destination) || !['volume', 'bind'].includes(mount.Type)) continue;
+    copy.Mounts.push({
+      Type: mount.Type,
+      Source: mount.Type === 'volume' ? mount.Name : mount.Source,
+      Target: mount.Destination,
+      ReadOnly: !mount.RW,
+      ...(mount.Type === 'bind' && mount.Propagation ? { BindOptions: { Propagation: mount.Propagation } } : {}),
+    });
+  }
+  return copy;
+}
+
+export function validateReplacement(old) {
+  if (old.HostConfig?.AutoRemove) throw new Error('Container mit AutoRemove können nicht sicher aktualisiert werden');
+  if (String(old.HostConfig?.NetworkMode || '').startsWith('container:')) throw new Error('Container mit gemeinsamem Container-Netzwerkmodus können nicht sicher aktualisiert werden');
+}
+
+const delay = (milliseconds) => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+export async function waitForContainerReady(id, {
+  timeoutSeconds = healthTimeoutSeconds,
+  graceSeconds = startupGraceSeconds,
+  intervalMilliseconds = 1_000,
+} = {}) {
+  const deadline = Date.now() + timeoutSeconds * 1_000;
+  let current = await inspectContainer(id);
+  if (!current.Config?.Healthcheck) {
+    await delay(graceSeconds * 1_000);
+    current = await inspectContainer(id);
+    if (!current.State?.Running) throw new Error(current.State?.Error || `Container wurde innerhalb von ${graceSeconds} Sekunden beendet`);
+    return { state: 'running', health: null };
+  }
+  while (Date.now() < deadline) {
+    current = await inspectContainer(id);
+    if (!current.State?.Running) throw new Error(current.State?.Error || 'Container wurde während der Startprüfung beendet');
+    const health = current.State.Health?.Status;
+    if (health === 'healthy') return { state: 'running', health };
+    if (health === 'unhealthy') {
+      const lastOutput = current.State.Health?.Log?.at(-1)?.Output?.trim();
+      throw new Error(`Healthcheck meldet unhealthy${lastOutput ? `: ${lastOutput}` : ''}`);
+    }
+    await delay(intervalMilliseconds);
+  }
+  throw new Error(`Healthcheck nach ${timeoutSeconds} Sekunden nicht erfolgreich`);
+}
+
 function cleanEndpoints(networks = {}) {
   return Object.fromEntries(Object.entries(networks).map(([name, endpoint]) => [name, {
     Aliases: endpoint.Aliases || [],
@@ -73,28 +135,27 @@ function cleanEndpoints(networks = {}) {
 
 export async function replaceContainer(id, targetImage) {
   const old = await inspectContainer(id);
+  validateReplacement(old);
   const name = old.Name.replace(/^\//, '');
   const backup = `${name}.cp-backup-${Date.now()}`;
   const wasRunning = old.State.Running;
   await pullImage(targetImage);
-  if (wasRunning) await dockerRequest('POST', `/containers/${id}/stop?t=30`);
+  if (wasRunning) await dockerRequest('POST', `/containers/${id}/stop?t=${encodeURIComponent(old.Config.StopTimeout ?? 30)}`);
   await dockerRequest('POST', `/containers/${id}/rename?name=${encodeURIComponent(backup)}`);
-  const config = structuredClone(old.Config);
+  const config = cleanContainerConfig(old.Config, old.Id);
   config.Image = targetImage;
-  for (const key of ['Hostname', 'Domainname']) delete config[key];
   const createBody = {
     ...config,
-    HostConfig: cleanHostConfig(old.HostConfig),
+    HostConfig: preserveMounts(cleanHostConfig(old.HostConfig), old.Mounts),
     NetworkingConfig: { EndpointsConfig: cleanEndpoints(old.NetworkSettings.Networks) },
   };
   let created;
   try {
     created = await dockerRequest('POST', `/containers/create?name=${encodeURIComponent(name)}`, createBody);
     if (wasRunning) await dockerRequest('POST', `/containers/${created.Id}/start`);
-    const current = await inspectContainer(created.Id);
-    if (wasRunning && !current.State.Running) throw new Error(current.State.Error || 'Ersatzcontainer ist nicht gestartet');
+    const readiness = wasRunning ? await waitForContainerReady(created.Id) : { state: 'stopped', health: null };
     await dockerRequest('DELETE', `/containers/${id}?v=0&force=1`);
-    return { id: created.Id, name, image: targetImage, backupRemoved: true };
+    return { id: created.Id, name, image: targetImage, readiness, backupRemoved: true };
   } catch (error) {
     if (created?.Id) await dockerRequest('DELETE', `/containers/${created.Id}?v=0&force=1`).catch(() => {});
     await dockerRequest('POST', `/containers/${id}/rename?name=${encodeURIComponent(name)}`).catch(() => {});

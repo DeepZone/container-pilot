@@ -1,11 +1,19 @@
 services:
   container-pilot:
     build: .
-    image: container-pilot:0.8.0
+    image: container-pilot:0.9.0-rc.1
     container_name: container-pilot
     restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
     ports:
-      - "3080:8080"
+      - "${CP_BIND_ADDRESS:-0.0.0.0}:3080:8080"
     environment:
       TZ: Europe/Berlin
       CP_PORT: "8080"
@@ -13,6 +21,9 @@ services:
       CP_ADMIN_USER: admin
       CP_ADMIN_PASSWORD_FILE: /run/secrets/admin_password
       CP_AUTO_DEFAULT: "false"
+      CP_HEALTH_TIMEOUT_SECONDS: "120"
+      CP_STARTUP_GRACE_SECONDS: "5"
+      CP_SECURE_COOKIE: "false"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - container-pilot-data:/data
