@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- English README is now the primary project entry point; the German documentation remains available as `README.de.md`.
+- Added structured installation, configuration, security, update, rollback, reverse-proxy, troubleshooting, contribution, and roadmap documentation.
+- Added public issue forms, pull request template, release-note categories, repository topics, and GitHub Discussions.
+- Removed the outdated production screenshot and aligned copyright notices with NoiSens Media.
+- Release images now use `rc` only for release candidates and reserve `latest`, major, and minor aliases for stable releases.
+
 ## 0.9.0-rc.6
 
 - Rollback-Punkte können nach erfolgreicher Betriebsbeobachtung bewusst verworfen werden.

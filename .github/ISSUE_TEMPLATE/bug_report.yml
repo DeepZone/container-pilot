@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible Container Pilot defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include passwords, tokens, cookies, internal addresses, private image names, or complete state files. Security vulnerabilities must follow SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Container Pilot version
+      placeholder: 0.9.0-rc.6
+    validations:
+      required: true
+  - type: input
+    id: docker
+    attributes:
+      label: Docker version and host OS
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Include only the minimal relevant event or log lines after removing sensitive data.
