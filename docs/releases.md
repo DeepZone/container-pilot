@@ -2,7 +2,7 @@
 
 [Documentation index](../README.md) · [Installation](installation.md)
 
-Container Pilot uses [Semantic Versioning](https://semver.org/). Release candidates use tags such as `v0.9.0-rc.6`; stable releases use tags such as `v1.0.0`.
+Container Pilot uses [Semantic Versioning](https://semver.org/). Release candidates use tags such as `v0.9.0-rc.7`; stable releases use tags such as `v1.0.0`.
 
 ## Channels
 
