@@ -81,10 +81,12 @@ Read [Security](docs/security.md), [Updates](docs/updates.md), and [Rollback](do
 - [Reverse proxy setup](docs/reverse-proxy.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Release process](docs/releases.md)
+- [Migrate from Watchtower](docs/migrate-from-watchtower.md)
+- [Container Pilot and Watchtower](docs/container-pilot-vs-watchtower.md)
+- [Container Pilot and WUD](docs/container-pilot-vs-wud.md)
+- [Release-candidate testing](docs/testing.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
-
-Migration and factual product comparisons are being prepared separately so that claims can be verified against current upstream documentation.
 
 ## Images and release channels
 
