@@ -7,3 +7,4 @@ header,main,footer{max-width:1350px;margin:auto}header{display:flex;justify-cont
 .settingsForm{display:grid;gap:16px;margin-top:22px}.settingsForm>label:not(.toggle){display:grid;gap:6px;font-size:13px;color:#a9bad0}.settingsForm input[type=number]{width:100%;padding:11px;border:1px solid #35506e;border-radius:8px;background:#0b1421;color:#fff}.settingsForm .muted{font-size:13px;margin:0}.settingsForm button{justify-self:start}
 .warningBox{margin:0;padding:12px 14px;border:1px solid #8b632d;border-radius:9px;background:#392b17;color:#ffdca8;font-size:13px;line-height:1.5}
 .language{margin-top:18px}.language select,[data-language]{padding:7px 9px;border:1px solid #35506e;border-radius:8px;background:#0b1421;color:#fff}
+.importRow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #22334a}.importRow small{display:block;margin-top:3px;word-break:break-all}
