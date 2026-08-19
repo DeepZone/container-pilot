@@ -3,7 +3,7 @@
   <h1>Docker Update Manager – Container Pilot</h1>
   <p><strong>Moderne deutsche Weboberfläche zur kontrollierten Prüfung und Installation von Docker-Image-Updates.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC1" src="https://img.shields.io/badge/Version-0.9.0--rc.1-d97706">
+    <img alt="Version 0.9.0 RC6" src="https://img.shields.io/badge/Version-0.9.0--rc.6-d97706">
     <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white">
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="Oberfläche Deutsch" src="https://img.shields.io/badge/Oberfläche-Deutsch-d97706">
@@ -14,9 +14,9 @@
 
 **Container Pilot ist eine eigenständige Watchtower-Alternative für die zentrale Verwaltung von Docker-Updates.** Die deutschsprachige Weboberfläche erkennt laufende und gestoppte Container, vergleicht lokale Images mit den Registry-Manifesten und ermöglicht kontrollierte manuelle oder automatische Aktualisierungen.
 
-Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist, und bietet einen bewussten Wechsel über die Weboberfläche an.
+Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist. In der Weboberfläche kann bewusst zwischen einem Update des bestehenden Tags und einem Wechsel auf `latest` entschieden werden. Die Automatik wechselt niemals selbstständig den Tag.
 
-> **Projektstatus:** Version 0.9.0-rc.1 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
+> **Projektstatus:** Version 0.9.0-rc.6 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren, Self-Updates und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
 
 ## Einblick
 
@@ -41,13 +41,14 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 | **Container** | Name, Container-ID, Image, Laufzeitstatus, Updatezustand sowie Zeitpunkt und Art des letzten Updates in einer gemeinsamen Liste einsehen |
 | **Update-Prüfung** | Docker Hub und GHCR anhand der Image-Manifeste und Digests prüfen; Fortschritt und Abschlussresultat direkt anzeigen |
 | **Automatik** | Prüfung aktivieren, Intervall zwischen 1 Minute und 7 Tagen festlegen und Sofortinstallation ein- oder ausschalten |
-| **Richtlinien** | Automatische Installation individuell pro Container freigeben oder sperren |
+| **Richtlinien** | Automatische Installation individuell pro Container freigeben oder sperren; automatische Updates bleiben stets auf dem konfigurierten Tag |
 | **Manuelle Updates** | Gefundene Updates unmittelbar installieren und Container mit bestehender Konfiguration neu erstellen |
-| **Tag-Wechsel** | Existenz von `latest` prüfen und bei Bedarf bewusst auf diesen Tag wechseln |
-| **Rollback** | Bei Startfehler, negativem Healthcheck oder Timeout automatisch den bisherigen Container wiederherstellen; nach erfolgreichen Updates einen manuellen Rollback auf den exakten vorherigen Image-Digest anbieten |
+| **Tag-Wechsel** | Bei fest getaggten Images bewusst zwischen „bestehenden Tag aktualisieren“ und „auf latest wechseln“ entscheiden |
+| **Rollback** | Bei Startfehler, negativem Healthcheck oder Timeout automatisch den bisherigen Container wiederherstellen; nach erfolgreichen Updates einen manuellen Rollback anbieten oder den Punkt samt ungenutztem Alt-Image bewusst verwerfen |
 | **Aktionssperren** | Update und Rollback pro Container serialisieren und laufende Vorgänge sichtbar machen |
 | **Benutzer** | Administrator- und Viewer-Konten über die Weboberfläche verwalten |
 | **Ereignisse** | Prüf-, Update-, Fehler-, Benutzer- und Anmeldeereignisse in einem eigenen Menüpunkt nachvollziehen |
+| **Systemupdate** | GitHub Releases prüfen und Container Pilot über einen getrennten Helfer mit Healthcheck und automatischer Wiederherstellung aktualisieren |
 
 ## Architektur: Weboberfläche, Docker API und Registry
 
@@ -74,7 +75,7 @@ Container Pilot kommuniziert direkt mit der lokalen Docker Engine über deren Un
 Repository klonen und Secret-Verzeichnis vorbereiten:
 
 ```bash
-git clone https://gitlab.noisens.de/nsens/container-pilot.git
+git clone https://github.com/DeepZone/container-pilot.git
 cd container-pilot
 mkdir -p secrets
 ```
@@ -86,10 +87,11 @@ openssl rand -base64 32 > secrets/admin_password
 chmod 600 secrets/admin_password
 ```
 
-Anschließend den Container bauen und starten:
+Anschließend das veröffentlichte Image starten:
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 Die Weboberfläche ist standardmäßig unter `http://127.0.0.1:3080` beziehungsweise der Adresse des Docker-Hosts auf Port `3080` erreichbar. Für den dauerhaften Betrieb empfiehlt sich die Bereitstellung in einem internen Managementnetz oder hinter einem abgesicherten Reverse Proxy.
@@ -111,6 +113,9 @@ Beim ersten Start wird der Benutzer aus `CP_ADMIN_USER` angelegt. Das Kennwort a
 | `CP_SECURE_COOKIE` | `false` | `true` hinter einem HTTPS-Reverse-Proxy; markiert das Sitzungscookie als Secure |
 | `CP_STORE_FILE` | `/data/state.json` | Pfad der persistenten Zustandsdatei |
 | `DOCKER_SOCKET` | `/var/run/docker.sock` | Pfad zum Docker-Unix-Socket |
+| `CP_SELF_UPDATE_REPOSITORY` | `DeepZone/container-pilot` | öffentliches GitHub-Repository für Release-Prüfungen |
+| `CP_SELF_UPDATE_IMAGE` | `ghcr.io/deepzone/container-pilot` | Registry-Repository der versionierten Release-Images |
+| `CP_SELF_UPDATE_CHANNEL` | `stable` | `stable` ignoriert Vorabversionen; `prerelease` berücksichtigt sie |
 
 ## Benutzer und Rollen
 
@@ -136,6 +141,8 @@ Der eingebundene Docker-Socket ermöglicht weitreichende Kontrolle über den Doc
 
 Die Anwendung nutzt HTTP-only-Sitzungscookies, SameSite-Schutz, CSRF-Prüfungen und gesalzene scrypt-Kennworthashes. Container Pilot selbst ist über das Label `container-pilot.watch=false` von seinen automatischen Updates ausgenommen.
 
+Eigene Updates werden im Menü **Systemupdate** verwaltet. Container Pilot startet dafür einen kurzlebigen Helfercontainer aus dem aktuell laufenden Image. Der Helfer lädt das versionierte Ziel-Image, ersetzt Container Pilot und wartet auf dessen Healthcheck. Schlägt Start oder Healthcheck fehl, wird automatisch der bisherige Container unter seinem ursprünglichen Namen wiederhergestellt. Der Status liegt persistent unter `/data/self-update.json` und ist nach einem Neustart weiterhin sichtbar.
+
 Der mitgelieferte Compose-Stack läuft ohne Linux-Capabilities, mit `no-new-privileges`, schreibgeschütztem Root-Dateisystem und begrenztem temporärem Dateisystem. Der Docker-Socket bleibt dennoch eine hochprivilegierte Schnittstelle: Wer Container Pilot administrieren kann, kann mittelbar Container auf dem Host ersetzen.
 
 ## Update- und Rollback-Sicherheit
@@ -143,6 +150,8 @@ Der mitgelieferte Compose-Stack läuft ohne Linux-Capabilities, mit `no-new-priv
 Container Pilot wartet nach dem Ersatz eines laufenden Containers auf dessen Docker-Healthcheck. Der alte Container wird erst gelöscht, wenn der neue Zustand `healthy` erreicht. Bei `unhealthy`, einem vorzeitigen Prozessende oder Timeout wird der neue Container entfernt und der alte Container unter seinem ursprünglichen Namen neu gestartet. Ohne definierten Healthcheck gilt eine konfigurierbare Startbeobachtung.
 
 Gleichzeitige Update- oder Rollback-Aktionen auf demselben Container werden abgewiesen. Environment, Labels, Hostname, Restart-Policy, Portbindungen, Netzwerke sowie benannte, anonyme und Bind-Mounts werden aus der bestehenden Docker-Konfiguration übernommen. Unsichere `AutoRemove`-Container und der Netzwerkmodus `container:…` werden nicht automatisch ersetzt.
+
+Ein Rollback startet exakt den gespeicherten Image-Digest, ordnet ihn aber wieder dem ursprünglichen Image-Tag zu. Dadurch bleibt der Container nicht dauerhaft auf einer unveränderlichen `@sha256:…`-Referenz hängen und kann später wieder regulär innerhalb seines Tags aktualisiert werden.
 
 > **Datensicherheit:** Ein Image-Rollback setzt niemals Daten in Volumes oder Datenbanken zurück. Bereits ausgeführte Schema- oder Datenmigrationen können inkompatibel mit dem alten Image sein. Vor automatischen Updates migrationsfähiger Anwendungen sind anwendungsspezifische Backups erforderlich.
 
