@@ -194,7 +194,8 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: publicSettings(session), registryAuth: { configured: session.role === 'admin' ? configuredRegistries() : [] }, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
+    const watchtowerImport = session.role === 'admin' ? watchtowerImportPreview(containers, store.policies) : null;
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: publicSettings(session), registryAuth: { configured: session.role === 'admin' ? configuredRegistries() : [] }, watchtowerImport: watchtowerImport ? { detected: watchtowerImport.detected, changes: watchtowerImport.changes } : null, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
       ...c,
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
