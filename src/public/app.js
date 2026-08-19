@@ -9,6 +9,7 @@ let pending = null;
 let authRevision = 0;
 let manualScanPending = false;
 let selfUpdateData = null;
+let watchtowerPreview = null;
 
 async function api(path, options = {}) {
   const requestAuthRevision = authRevision;
@@ -28,7 +29,7 @@ function showApp(session) {
   authRevision += 1; csrf = session.csrf; currentUser = session.user; setVersion(session.version);
   $('#loginView').hidden = true; $('#app').hidden = false;
   $('#who').textContent = `${currentUser.username} · ${currentUser.role === 'admin' ? t('admin') : t('viewRole')}`;
-  $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin'; $('#selfUpdateButton').hidden = currentUser.role !== 'admin';
+  $('#usersButton').hidden = currentUser.role !== 'admin'; $('#settingsButton').hidden = currentUser.role !== 'admin'; $('#watchtowerButton').hidden = currentUser.role !== 'admin'; $('#selfUpdateButton').hidden = currentUser.role !== 'admin';
   showView('containers');
 }
 function showView(view) {
@@ -161,6 +162,24 @@ $('#installSelfUpdate').onclick = () => {
     $('#notice').textContent = t('selfStarted', { version: selfUpdateData.release.version });
     setTimeout(() => window.location.reload(), 45_000);
   });
+};
+
+async function loadWatchtowerPreview() {
+  watchtowerPreview = await api('/api/watchtower/import');
+  $('#watchtowerSummary').textContent = watchtowerPreview.detected ? t('watchtowerDetected', watchtowerPreview) : t('noWatchtowerLabels');
+  $('#watchtowerList').innerHTML = watchtowerPreview.entries.map(entry => `<label class="importRow"><input type="checkbox" data-watchtower-id="${esc(entry.id)}" ${entry.changes ? 'checked' : ''} ${entry.importable ? '' : 'disabled'}><span><strong>${esc(entry.name)}</strong><small>${esc(entry.image)}</small></span><span class="badge ${entry.proposedAuto ? 'good' : ''}">${esc(t(entry.importable ? entry.proposedAuto ? 'proposedOn' : 'proposedOff' : 'ambiguousLabel'))}</span></label>`).join('');
+  $('#importWatchtower').disabled = watchtowerPreview.detected === 0;
+}
+$('#watchtowerButton').onclick = async () => { $('#watchtowerDialog').showModal(); try { await loadWatchtowerPreview(); } catch (error) { $('#watchtowerSummary').textContent = t('error', { message: error.message }); } };
+document.querySelector('[data-close-watchtower]').onclick = () => $('#watchtowerDialog').close();
+$('#reloadWatchtower').onclick = loadWatchtowerPreview;
+$('#importWatchtower').onclick = async () => {
+  const selectedIds = [...document.querySelectorAll('[data-watchtower-id]:checked')].map(element => element.dataset.watchtowerId);
+  if (!selectedIds.length) { $('#watchtowerSummary').textContent = t('selectionRequired'); return; }
+  try {
+    const result = await api('/api/watchtower/import', { method: 'POST', body: JSON.stringify({ previewId: watchtowerPreview.previewId, selectedIds }) });
+    $('#watchtowerSummary').textContent = t('importComplete', { count: result.imported }); await load(); await loadWatchtowerPreview();
+  } catch (error) { $('#watchtowerSummary').textContent = t('error', { message: error.message }); }
 };
 
 bindLanguage(() => { if (currentUser) { showApp({ csrf, user: currentUser, version: currentStatus?.version }); load().catch(() => {}); } });

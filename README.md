@@ -62,6 +62,7 @@ Detect → Decide → Update → Verify → Recover
 - Administrator and read-only viewer roles
 - Container configuration reconstruction, including mounts, networks, ports, environment, and restart policy
 - Safe self-update flow through a separate helper container
+- Opt-in Watchtower policy import with a read-only preview and per-rule confirmation
 
 ## Important safety boundary
 
@@ -87,6 +88,7 @@ Read [Security](docs/security.md), [Updates](docs/updates.md), and [Rollback](do
 - [Release-candidate testing](docs/testing.md)
 - [Webhook notifications](docs/notifications.md)
 - [Private registries](docs/private-registries.md)
+- [Project website](https://deepzone.github.io/container-pilot/)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 

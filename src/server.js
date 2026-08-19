@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword, createSession, readSession, destroySessio
 import { checkSelfUpdate, launchSelfUpdater, readSelfUpdateStatus } from './self-update.js';
 import { sendWebhook, validateWebhookUrl } from './notifications.js';
 import { configuredRegistries } from './registry-auth.js';
+import { applyWatchtowerImport, watchtowerImportPreview } from './watchtower-import.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
@@ -247,6 +248,24 @@ async function api(req, res, url, session) {
   if (req.method === 'GET' && url.pathname === '/api/users') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     return json(res, 200, { users: Object.entries(getStore().users).map(([name, value]) => publicUser(name, value)) });
+  }
+  if (req.method === 'GET' && url.pathname === '/api/watchtower/import') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    return json(res, 200, watchtowerImportPreview(await listContainers(), getStore().policies));
+  }
+  if (req.method === 'POST' && url.pathname === '/api/watchtower/import') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const data = await body(req);
+    if (!Array.isArray(data.selectedIds) || data.selectedIds.some(id => typeof id !== 'string')) return json(res, 400, { error: 'Ungültige Auswahl' });
+    const preview = watchtowerImportPreview(await listContainers(), getStore().policies);
+    if (data.previewId !== preview.previewId) return json(res, 409, { error: 'Container oder Labels haben sich geändert. Vorschau erneut laden.' });
+    const known = new Set(preview.entries.map(entry => entry.id));
+    if (data.selectedIds.some(id => !known.has(id))) return json(res, 400, { error: 'Auswahl enthält unbekannte Container' });
+    const imported = applyWatchtowerImport(preview, data.selectedIds, getStore().policies);
+    saveStore();
+    for (const entry of imported) addEvent({ type: 'watchtower-policy-imported', actor: session.username, container: entry.name, image: entry.image, result: 'success', message: `Automatic updates ${entry.proposedAuto ? 'enabled' : 'disabled'} (${entry.reason})` });
+    addEvent({ type: 'watchtower-import-complete', actor: session.username, result: 'success', message: `${imported.length} policies imported` });
+    return json(res, 200, { imported: imported.length });
   }
   if (req.method === 'POST' && url.pathname === '/api/users') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });

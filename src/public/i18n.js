@@ -7,6 +7,23 @@ export const messages = {
   }
 };
 
+Object.assign(messages.en, {
+  watchtowerImport: 'Watchtower import',
+  watchtowerHelp: 'Detected labels are shown as a preview. Nothing changes until selected rules are imported.',
+  watchtowerDetected: '{detected} labelled containers detected · {changes} policy changes proposed',
+  importSelected: 'Import selected', proposedOn: 'Enable automatic updates',
+  proposedOff: 'Keep automatic updates disabled', noWatchtowerLabels: 'No supported Watchtower labels detected.',
+  importComplete: '{count} policies imported.', selectionRequired: 'Select at least one policy.', ambiguousLabel: 'No safe mapping',
+});
+Object.assign(messages.de, {
+  watchtowerImport: 'Watchtower-Import',
+  watchtowerHelp: 'Erkannte Labels werden nur als Vorschau angezeigt. Erst ausgewählte Regeln werden übernommen.',
+  watchtowerDetected: '{detected} markierte Container erkannt · {changes} Richtlinienänderungen vorgeschlagen',
+  importSelected: 'Auswahl importieren', proposedOn: 'Automatische Updates aktivieren',
+  proposedOff: 'Automatische Updates deaktiviert lassen', noWatchtowerLabels: 'Keine unterstützten Watchtower-Labels erkannt.',
+  importComplete: '{count} Richtlinien importiert.', selectionRequired: 'Wähle mindestens eine Richtlinie aus.', ambiguousLabel: 'Keine sichere Zuordnung',
+});
+
 let language = globalThis.localStorage?.getItem('cp-language') || (globalThis.navigator?.language?.toLowerCase().startsWith('de') ? 'de' : 'en');
 if (!messages[language]) language = 'en';
 

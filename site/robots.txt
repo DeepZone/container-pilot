@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://deepzone.github.io/container-pilot/sitemap.xml

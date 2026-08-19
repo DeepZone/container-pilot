@@ -30,6 +30,8 @@ Container Pilot recognizes these Watchtower labels for an optional import previe
 
 This mapping follows Watchtower's official [container-selection documentation](https://github.com/containrrr/watchtower/blob/main/docs/container-selection.md). A preview never changes policies. An administrator must confirm the import, and every imported rule is written to the event history.
 
+Open **Watchtower import** as an administrator. Review every detected rule, leave only intended changes selected, and confirm the import. A `monitor-only=false` label without an explicit enable label is shown but cannot be imported because its meaning depends on Watchtower's global configuration.
+
 Other Watchtower options are intentionally not imported. Scheduling, cleanup, scopes, lifecycle hooks, registry credentials, notifications, and command-line container filters do not map safely to a per-container boolean policy.
 
 ## Validate the new setup

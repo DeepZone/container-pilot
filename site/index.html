@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Container Pilot is a controlled Docker update manager with a Web UI, health validation, and automatic rollback.">
+  <meta name="theme-color" content="#0a101b">
+  <title>Container Pilot · Controlled Docker Updates</title>
+  <link rel="canonical" href="https://deepzone.github.io/container-pilot/">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header class="nav"><a class="wordmark" href="#top" aria-label="Container Pilot home"><svg viewBox="0 0 64 64" role="img" aria-label="Container Pilot logo"><path d="M32 3 56 17v30L32 61 8 47V17Z"/><path d="M22 40V24h13c8 0 12 4 12 10s-4 10-12 10h-5v8h-8Zm8-8v4h5c3 0 4-1 4-2s-1-2-4-2Z"/></svg><span>Container Pilot</span></a><nav><a href="#features">Features</a><a href="#security">Security</a><a href="https://github.com/DeepZone/container-pilot">GitHub</a></nav></header>
+  <main id="top">
+    <section class="hero"><p class="eyebrow">Detect · Decide · Update · Verify · Recover</p><h1>Take control of your Docker updates.</h1><p class="lead">Container Pilot detects Docker image updates, lets you approve or automate them per container, validates replacements, and restores the previous image when startup fails.</p><div class="actions"><a class="primary" href="https://github.com/DeepZone/container-pilot#quick-start">Install with Docker Compose</a><a href="https://github.com/DeepZone/container-pilot">View on GitHub</a></div><p class="status">Release candidate · Linux AMD64 and ARM64 · MIT licensed</p></section>
+    <section class="statement"><strong>Watchtower automates updates.</strong><span>Container Pilot manages updates.</span></section>
+    <section id="features"><h2>Controlled, visible, recoverable</h2><div class="grid"><article><h3>Detect</h3><p>Inspect running and stopped containers and compare local image digests with Docker Hub, GHCR, GitLab, or another OCI registry.</p></article><article><h3>Decide</h3><p>Use manual approval or explicit per-container policies. Fixed tags never switch to <code>latest</code> automatically.</p></article><article><h3>Verify</h3><p>Wait for Docker healthchecks or a startup stability window before accepting a replacement.</p></article><article><h3>Recover</h3><p>Automatically restore a failed update or use the retained image-level rollback point from the Web UI.</p></article><article><h3>Understand</h3><p>See status, scan outcomes, last update mode, current actions, and a persistent event history.</p></article><article><h3>Control access</h3><p>Separate administrator actions from read-only viewer access and protect mutations with same-origin CSRF checks.</p></article></div></section>
+    <section class="migration"><div><p class="eyebrow">Moving from Watchtower?</p><h2>Import deliberately, not blindly.</h2><p>Container Pilot detects supported Watchtower selection labels, shows a policy preview, and changes only rules explicitly confirmed by an administrator.</p></div><a href="https://github.com/DeepZone/container-pilot/blob/main/docs/migrate-from-watchtower.md">Read the migration guide</a></section>
+    <section id="security"><h2>Power requires a clear boundary</h2><p>Container Pilot needs write access to the Docker socket. Run it only on a trusted management network, behind HTTPS or a VPN, and protect stateful applications with application-aware backups. Image rollback does not restore volumes or database migrations.</p><a href="https://github.com/DeepZone/container-pilot/blob/main/docs/security.md">Read the security model</a></section>
+    <section class="start"><h2>Start with a non-critical workload.</h2><pre><code>curl -fsSLO https://raw.githubusercontent.com/DeepZone/container-pilot/main/compose.yml
+docker compose pull
+docker compose up -d</code></pre><a class="primary" href="https://github.com/DeepZone/container-pilot/blob/main/docs/installation.md">Installation guide</a></section>
+  </main>
+  <footer><span>Container Pilot · NoiSens Media</span><span>Controlled Docker Updates</span></footer>
+</body>
+</html>

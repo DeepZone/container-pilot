@@ -23,8 +23,8 @@ The roadmap is directional, not a release guarantee. Container Pilot remains foc
 
 ## Future
 
-- opt-in Watchtower policy import with preview
 - additional registries
 - maintenance windows and advanced scheduling
 - pre-update, backup, and post-update hooks
 - documented external API
+- additional integrations that directly support the update lifecycle
