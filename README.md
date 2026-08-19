@@ -11,6 +11,7 @@
     <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="AMD64 and ARM64" src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-2496ed">
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c3aed">
+    <a href="https://buymeacoffee.com/mail9l"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-Support-FFDD00?logo=buymeacoffee&logoColor=000000"></a>
   </p>
 </div>
 
