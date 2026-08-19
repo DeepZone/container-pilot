@@ -14,14 +14,12 @@ The roadmap is directional, not a release guarantee. Container Pilot remains foc
 
 ## v1.1
 
-- generic webhook notifications
 - ntfy and Gotify integrations
-- English and German Web UI
+- additional notification adapters
 
 ## v1.2
 
-- private Docker Hub and GHCR authentication
-- generic OCI registry credentials through secrets
+- additional cloud-specific registry credential helpers
 
 ## Future
 

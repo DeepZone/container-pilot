@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { dockerRegistryAuth } from './registry-auth.js';
 
 const socketPath = process.env.DOCKER_SOCKET || '/var/run/docker.sock';
 const healthTimeoutSeconds = Math.max(5, Number(process.env.CP_HEALTH_TIMEOUT_SECONDS || 120));
@@ -50,9 +51,9 @@ export async function pullImage(image) {
   const fromImage = registry === 'docker.io' ? repository : `${registry}/${repository}`;
   if (image.includes('@')) {
     const digest = image.split('@')[1];
-    return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(`${fromImage}@${digest}`)}`);
+    return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(`${fromImage}@${digest}`)}`, undefined, { 'X-Registry-Auth': dockerRegistryAuth(registry) });
   }
-  return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(fromImage)}&tag=${encodeURIComponent(tag)}`);
+  return dockerRequest('POST', `/images/create?fromImage=${encodeURIComponent(fromImage)}&tag=${encodeURIComponent(tag)}`, undefined, { 'X-Registry-Auth': dockerRegistryAuth(registry) });
 }
 
 export async function tagImage(sourceImage, targetImage) {

@@ -4,15 +4,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage, removeUnusedImage } from './docker.js';
 import { inspectRemote } from './registry.js';
-import { loadStore, getStore, saveStore, addEvent } from './store.js';
+import { loadStore, getStore, saveStore, addEvent, setEventListener } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
 import { checkSelfUpdate, launchSelfUpdater, readSelfUpdateStatus } from './self-update.js';
+import { sendWebhook, validateWebhookUrl } from './notifications.js';
+import { configuredRegistries } from './registry-auth.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(sourceDir, 'public');
 const port = Number(process.env.CP_PORT || 8080);
 const appVersion = JSON.parse(fs.readFileSync(path.join(sourceDir, '..', 'package.json'), 'utf8')).version;
+setEventListener(event => sendWebhook(event, getStore().settings?.webhook, appVersion));
 const initialUser = process.env.CP_ADMIN_USER || 'admin';
 const initialPassword = process.env.CP_ADMIN_PASSWORD_FILE ? fs.readFileSync(process.env.CP_ADMIN_PASSWORD_FILE, 'utf8').trim() : process.env.CP_ADMIN_PASSWORD;
 if (!initialPassword) throw new Error('Initiales Admin-Passwort fehlt');
@@ -48,11 +51,30 @@ function defaultSettings() {
     enabled: true,
     intervalMinutes: Math.max(1, Number(process.env.CP_SCAN_INTERVAL_MINUTES || 60)),
     installUpdates: true,
+    webhook: { enabled: false, url: '' },
   };
 }
 if (!getStore().settings) {
   getStore().settings = defaultSettings();
   saveStore();
+} else {
+  getStore().settings = { ...defaultSettings(), ...getStore().settings, webhook: { ...defaultSettings().webhook, ...getStore().settings.webhook } };
+  saveStore();
+}
+
+function publicSettings(session) {
+  const settings = getStore().settings;
+  return {
+    enabled: settings.enabled, intervalMinutes: settings.intervalMinutes, installUpdates: settings.installUpdates,
+    webhook: session.role === 'admin' ? settings.webhook : { enabled: settings.webhook.enabled },
+  };
+}
+
+function healthFailure(error) { return /healthcheck|unhealthy|startprüfung|startup|während der start/i.test(error.message); }
+
+function recordActionFailure(type, session, container, image, error) {
+  addEvent({ type, actor: session?.username || null, container, image, result: 'error', message: error.message });
+  if (healthFailure(error)) addEvent({ type: 'healthcheck-failed', actor: session?.username || null, container, image, result: 'error', message: error.message });
 }
 
 function scheduleNextScan(delayMinutes = getStore().settings.intervalMinutes) {
@@ -109,10 +131,14 @@ async function scanAll(trigger = 'scheduled', actor = null) {
       result.checked += 1;
       try {
         const remote = await inspectRemote(c.image); const localDigest = await localImageDigest(c.imageId, c.image);
+        const previousScan = store.scans[c.name];
         store.scans[c.name] = { at: new Date().toISOString(), ...remote, localDigest, error: null };
         const policy = store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' };
         const updateAvailable = remote.currentDigest && localDigest && remote.currentDigest !== localDigest;
         if (updateAvailable) result.updatesFound += 1;
+        if (updateAvailable && (!previousScan || previousScan.currentDigest !== remote.currentDigest || previousScan.localDigest === previousScan.currentDigest)) {
+          addEvent({ type: 'update-available', container: c.name, image: c.image, result: 'success', message: `Update available for ${remote.tag}` });
+        }
         if (store.settings.installUpdates && policy.auto && updateAvailable) {
           await withContainerLock(c.name, 'Automatisches Update', async () => {
             const current = (await listContainers()).find(item => item.name === c.name);
@@ -121,11 +147,14 @@ async function scanAll(trigger = 'scheduled', actor = null) {
             if (currentLocalDigest === remote.currentDigest) return;
             const rollback = { image: digestReference(current.image, currentLocalDigest), displayImage: current.image, createdAt: new Date().toISOString() };
             if (!rollback.image) throw new Error('Rollback-Punkt konnte nicht erstellt werden');
-            await replaceContainer(current.id, current.image);
+            addEvent({ type: 'update-started', container: c.name, image: c.image, result: 'success', message: 'Automatic update started' });
+            try { await replaceContainer(current.id, current.image); }
+            catch (error) { recordActionFailure('update-failed', null, c.name, c.image, error); throw error; }
             store.rollbacks[c.name] = rollback;
             store.lastUpdates[c.name] = { at: new Date().toISOString(), mode: 'automatic', type: 'auto-update', actor: null };
             result.installed += 1;
             addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
+            addEvent({ type: 'update-successful', container: c.name, image: c.image, result: 'success', message: 'Automatic update completed' });
           });
         }
       } catch (error) {
@@ -170,7 +199,7 @@ async function api(req, res, url, session) {
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: store.settings, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: publicSettings(session), registryAuth: { configured: session.role === 'admin' ? configuredRegistries() : [] }, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
       ...c,
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
@@ -207,7 +236,10 @@ async function api(req, res, url, session) {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     const data = await body(req); const intervalMinutes = Number(data.intervalMinutes);
     if (!Number.isInteger(intervalMinutes) || intervalMinutes < 1 || intervalMinutes > 10_080) return json(res, 400, { error: 'Intervall muss zwischen 1 und 10.080 Minuten liegen' });
-    getStore().settings = { enabled: data.enabled === true, intervalMinutes, installUpdates: data.installUpdates === true };
+    let webhookUrl;
+    try { webhookUrl = validateWebhookUrl(String(data.webhook?.url || '')); }
+    catch (error) { return json(res, 400, { error: error.message }); }
+    getStore().settings = { enabled: data.enabled === true, intervalMinutes, installUpdates: data.installUpdates === true, webhook: { enabled: data.webhook?.enabled === true, url: webhookUrl } };
     saveStore(); scheduleNextScan();
     addEvent({ type: 'settings-changed', actor: session.username, result: 'success', message: `Intervall ${intervalMinutes} min` });
     return json(res, 200, { settings: getStore().settings, nextScanAt });
@@ -262,10 +294,15 @@ async function api(req, res, url, session) {
       const currentDigest = await localImageDigest(current.imageId, current.image);
       const rollback = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
       if (!rollback.image) throw Object.assign(new Error('Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback-Punkt kann nicht erstellt werden'), { status: 409 });
-      const replaced = await replaceContainer(current.id, target); const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
+      addEvent({ type: 'update-started', actor: session.username, container: current.name, image: target, result: 'success', message: data.target === 'latest' ? 'Switch to latest started' : 'Manual update started' });
+      let replaced;
+      try { replaced = await replaceContainer(current.id, target); }
+      catch (error) { recordActionFailure('update-failed', session, current.name, target, error); throw error; }
+      const updateType = data.target === 'latest' ? 'switch-latest' : 'manual-update';
       getStore().rollbacks[current.name] = rollback;
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
       addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
+      addEvent({ type: 'update-successful', actor: session.username, container: current.name, image: target, result: 'success', message: 'Manual update completed' });
       return replaced;
     });
     return json(res, 200, result);
@@ -279,10 +316,14 @@ async function api(req, res, url, session) {
       const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
       const displayTarget = checkpoint.displayImage && !checkpoint.displayImage.includes('@') ? checkpoint.displayImage : null;
       if (displayTarget) await tagImage(checkpoint.image, displayTarget);
-      const replaced = await replaceContainer(current.id, displayTarget || checkpoint.image, { pull: false });
+      addEvent({ type: 'rollback-started', actor: session.username, container: current.name, image: checkpoint.image, result: 'success' });
+      let replaced;
+      try { replaced = await replaceContainer(current.id, displayTarget || checkpoint.image, { pull: false }); }
+      catch (error) { recordActionFailure('rollback-failed', session, current.name, checkpoint.image, error); throw error; }
       delete getStore().rollbacks[current.name];
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
       addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
+      addEvent({ type: 'rollback-successful', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Restored ${checkpoint.displayImage}` });
       return replaced;
     });
     return json(res, 200, result);
@@ -309,7 +350,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`); const session = readSession(req.headers.cookie);
     if (url.pathname.startsWith('/api/')) return await api(req, res, url, session);
-    const requested = url.pathname === '/' ? 'index.html' : url.pathname.slice(1); const full = path.resolve(root, requested);
+    const requested = url.pathname === '/' ? 'index.html' : url.pathname === '/favicon.ico' ? 'logo.png' : url.pathname.slice(1); const full = path.resolve(root, requested);
     if (!full.startsWith(`${root}${path.sep}`) && full !== path.join(root, 'index.html')) return res.writeHead(403).end();
     const data = fs.readFileSync(full);
     const type = full.endsWith('.css') ? 'text/css'

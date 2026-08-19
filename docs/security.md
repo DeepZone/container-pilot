@@ -24,6 +24,8 @@ Container Pilot requires write access to `/var/run/docker.sock` to recreate cont
 
 The initial password is read through a Docker secret. Never commit the `secrets/` directory, `/data/state.json`, registry credentials, debug dumps, or unredacted production logs.
 
+Registry passwords and webhook tokens are accepted only through configured secret files and are not returned by the API. Webhook URLs are administrator-controlled outbound destinations. HTTPS is enforced unless the explicit development override is enabled. This does not prevent an administrator from selecting an internal HTTPS endpoint; administrator access is already equivalent to privileged Docker-host access.
+
 ## Rollback boundary
 
 Rollback restores a container image and container configuration. It does not restore database schemas, volumes, bind-mounted files, or external services. Use application-aware backups for stateful workloads.

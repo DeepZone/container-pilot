@@ -85,6 +85,8 @@ Read [Security](docs/security.md), [Updates](docs/updates.md), and [Rollback](do
 - [Container Pilot and Watchtower](docs/container-pilot-vs-watchtower.md)
 - [Container Pilot and WUD](docs/container-pilot-vs-wud.md)
 - [Release-candidate testing](docs/testing.md)
+- [Webhook notifications](docs/notifications.md)
+- [Private registries](docs/private-registries.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 
@@ -120,11 +122,10 @@ npm run test:integration
 
 ## Current limitations
 
-- Private registries are not supported yet.
-- Registry inspection currently targets Docker Hub and public GHCR images.
+- Private Docker Hub, GHCR, GitLab, and generic OCI registries are supported through Docker Secret credentials.
 - Containers without a Docker healthcheck can only be observed for process stability during the configured startup grace period.
 - Technical health does not replace application-specific end-to-end testing.
-- The Web UI currently uses German text; English UI support is planned.
+- The Web UI supports English and German with browser detection and a persistent manual selector.
 
 ## Contributing and security
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const file = process.env.CP_STORE_FILE || '/data/state.json';
 let state = { policies: {}, scans: {}, events: [], users: {}, lastScan: null, lastScanResult: null, lastUpdates: {}, rollbacks: {}, settings: null };
+let eventListener = null;
 
 export function loadStore() {
   try { state = { ...state, ...JSON.parse(fs.readFileSync(file, 'utf8')) }; } catch (e) {
@@ -18,7 +19,10 @@ export function saveStore() {
   fs.renameSync(tmp, file);
 }
 export function addEvent(event) {
-  state.events.unshift({ at: new Date().toISOString(), ...event });
+  const stored = { at: new Date().toISOString(), ...event };
+  state.events.unshift(stored);
   state.events = state.events.slice(0, 200);
   saveStore();
+  if (eventListener) Promise.resolve(eventListener(stored)).catch(error => console.error('Event listener failed', error.message));
 }
+export function setEventListener(listener) { eventListener = listener; }

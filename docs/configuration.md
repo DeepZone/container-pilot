@@ -20,6 +20,9 @@
 | `CP_SELF_UPDATE_REPOSITORY` | `DeepZone/container-pilot` | GitHub release source |
 | `CP_SELF_UPDATE_IMAGE` | `ghcr.io/deepzone/container-pilot` | Release image repository |
 | `CP_SELF_UPDATE_CHANNEL` | `stable` | `stable` or `prerelease` |
+| `CP_REGISTRY_CREDENTIALS_FILE` | unset | Docker Secret JSON for private registry pull credentials |
+| `CP_WEBHOOK_TOKEN_FILE` | unset | Docker Secret containing an optional webhook bearer token |
+| `CP_ALLOW_INSECURE_WEBHOOK` | `false` | Allow HTTP webhook URLs for trusted development environments only |
 
 Settings changed in the Web UI are persisted in `/data/state.json` and take precedence over initial scheduling defaults.
 
@@ -31,3 +34,5 @@ Settings changed in the Web UI are persisted in `/data/state.json` and take prec
 ## Per-container policy
 
 Automatic installation requires both global automatic installation and the individual container policy. Automatic updates retain the configured tag and never switch a container to `latest`.
+
+Webhook enablement and its non-secret HTTPS URL are stored with the settings. Registry credentials and webhook bearer tokens are file-only secrets and are never persisted in the state store. See [Webhook notifications](notifications.md) and [Private registries](private-registries.md).
