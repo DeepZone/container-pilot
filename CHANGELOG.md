@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added explicit opt-in anonymous telemetry with a live payload preview, daily jittered reporting, fail-open delivery, local reset/server deletion controls, and persistent update and rollback counters.
+- Added a separately deployable PostgreSQL telemetry tracker with a write-only public listener, authenticated internal dashboard, strict schema/rate/body limits, retention, migrations, and hardened Compose/reverse-proxy examples.
+
 ## 0.9.0-rc.10
 
 - Restored an anonymized product dashboard preview to the English and German README files.

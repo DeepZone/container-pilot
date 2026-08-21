@@ -140,6 +140,8 @@ npm run test:integration
 
 ## Contributing and security
 
+Anonymous usage statistics are optional and disabled by default. When enabled, Container Pilot sends only aggregated technical usage statistics—never container or image names, IP addresses, hostnames, credentials, or application data. See [Telemetry](docs/telemetry.md).
+
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 Do not publish credentials, tokens, private image names, internal addresses, or complete state files in issues. Report vulnerabilities according to [SECURITY.md](SECURITY.md).

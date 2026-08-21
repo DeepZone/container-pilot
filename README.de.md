@@ -131,6 +131,8 @@ Sitzungen bleiben zwölf Stunden gültig und werden beim Ändern des eigenen Ken
 
 ## Sicherheit im Docker-Betrieb
 
+Anonyme Nutzungsstatistiken sind optional und standardmäßig deaktiviert. Nach ausdrücklicher Aktivierung sendet Container Pilot ausschließlich aggregierte technische Nutzungsdaten – niemals Container- oder Image-Namen, IP-Adressen, Hostnamen, Zugangsdaten oder Anwendungsdaten. Details stehen unter [Telemetrie](docs/telemetry.md).
+
 Der eingebundene Docker-Socket ermöglicht weitreichende Kontrolle über den Docker-Host. Container Pilot gehört deshalb ausschließlich in eine vertrauenswürdige Verwaltungsumgebung.
 
 - Weboberfläche nicht ungeschützt im öffentlichen Internet bereitstellen
