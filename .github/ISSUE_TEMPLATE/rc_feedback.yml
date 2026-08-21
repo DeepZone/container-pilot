@@ -6,19 +6,40 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: Never include credentials, cookies, tokens, private image names, internal addresses, environment values, or complete state files.
+      value: "Privacy: never include credentials, cookies, tokens, private image names, private registry URLs, internal hostnames or IP addresses, environment values, mount paths, full environment dumps, complete state files, or unredacted Docker inspection output."
   - type: input
     id: version
     attributes:
       label: Container Pilot version
-      placeholder: 0.9.0-rc.6
+      placeholder: 0.9.0-rc.12
     validations:
       required: true
   - type: input
-    id: platform
+    id: docker_version
     attributes:
-      label: Docker host
-      description: Operating system, architecture, Docker Engine, and Compose versions.
+      label: Docker version
+      placeholder: Docker Engine 27.5.1
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Host operating system
+      placeholder: Debian 12
+    validations:
+      required: true
+  - type: input
+    id: architecture
+    attributes:
+      label: Architecture
+      placeholder: amd64 or arm64
+    validations:
+      required: true
+  - type: input
+    id: container_count
+    attributes:
+      label: Approximate container count
+      placeholder: About 20
     validations:
       required: true
   - type: dropdown
@@ -39,12 +60,30 @@ body:
     validations:
       required: true
   - type: textarea
-    id: result
+    id: expected
     attributes:
-      label: Expected and actual result
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
       description: Include exact timestamps and sanitized event/error text.
     validations:
       required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: List the smallest repeatable sequence.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant sanitized logs or events
+      description: Include only minimal lines after removing all sensitive data listed above.
   - type: checkboxes
     id: safety
     attributes:
@@ -52,5 +91,5 @@ body:
       options:
         - label: I tested on a non-critical workload or had an application-aware backup.
           required: true
-        - label: I removed credentials, private names, internal addresses, and environment values.
+        - label: I removed credentials, private names and registry URLs, internal hostnames and IPs, environment values and dumps, mount paths, and other identifying data.
           required: true
