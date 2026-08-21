@@ -17,3 +17,14 @@ test('sessions are read from hardened cookies and can be destroyed', () => {
   destroySession(created.token);
   assert.equal(readSession(`cp_session=${created.token}`), null);
 });
+
+test('native TLS automatically marks session cookies as Secure', () => {
+  const previousCert = process.env.CP_TLS_CERT_FILE;
+  const previousKey = process.env.CP_TLS_KEY_FILE;
+  process.env.CP_TLS_CERT_FILE = '/cert'; process.env.CP_TLS_KEY_FILE = '/key';
+  try { assert.match(sessionCookie('token'), /; Secure$/); }
+  finally {
+    if (previousCert === undefined) delete process.env.CP_TLS_CERT_FILE; else process.env.CP_TLS_CERT_FILE = previousCert;
+    if (previousKey === undefined) delete process.env.CP_TLS_KEY_FILE; else process.env.CP_TLS_KEY_FILE = previousKey;
+  }
+});

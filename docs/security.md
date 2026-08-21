@@ -8,7 +8,7 @@ Container Pilot requires write access to `/var/run/docker.sock` to recreate cont
 
 - Never expose the Web UI directly to the public Internet.
 - Prefer a VPN or trusted management network.
-- Use an HTTPS reverse proxy and set `CP_SECURE_COOKIE=true`.
+- Use an HTTPS reverse proxy or native HTTPS. Set `CP_SECURE_COOKIE=true` behind a proxy; native HTTPS enables it automatically.
 - Restrict port `3080` with host and network firewalls.
 - Keep Container Pilot and the Docker host updated.
 
@@ -25,6 +25,8 @@ Container Pilot requires write access to `/var/run/docker.sock` to recreate cont
 The initial password is read through a Docker secret. Never commit the `secrets/` directory, `/data/state.json`, registry credentials, debug dumps, or unredacted production logs.
 
 Registry passwords and webhook tokens are accepted only through configured secret files and are not returned by the API. Webhook URLs are administrator-controlled outbound destinations. HTTPS is enforced unless the explicit development override is enabled. This does not prevent an administrator from selecting an internal HTTPS endpoint; administrator access is already equivalent to privileged Docker-host access.
+
+Native TLS certificate and private-key paths are configured through environment variables, while their contents remain mounted files. Container Pilot requires certificate and key together, supports encrypted keys through a separate passphrase file, and enforces TLS 1.2 or newer. Never store private keys in the repository or application state.
 
 ## Rollback boundary
 

@@ -50,7 +50,7 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 ```mermaid
 flowchart LR
-    U["Administrator / Betrachter"] -->|HTTP / Reverse Proxy| C["Container Pilot"]
+    U["Administrator / Betrachter"] -->|HTTPS oder Reverse Proxy| C["Container Pilot"]
     C -->|Unix Socket| D["Docker Engine"]
     C -->|Manifest- und Digest-Prüfung| R["Docker Hub / GHCR"]
     D --> K["Verwaltete Container"]
@@ -90,7 +90,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Die Weboberfläche ist standardmäßig unter `http://127.0.0.1:3080` beziehungsweise der Adresse des Docker-Hosts auf Port `3080` erreichbar. Für den dauerhaften Betrieb empfiehlt sich die Bereitstellung in einem internen Managementnetz oder hinter einem abgesicherten Reverse Proxy.
+Die Weboberfläche ist standardmäßig unter `http://127.0.0.1:3080` beziehungsweise der Adresse des Docker-Hosts auf Port `3080` erreichbar. Mit `compose.https.yml` kann Container Pilot HTTPS auch direkt bereitstellen; alternativ bleibt ein abgesicherter Reverse Proxy möglich. Details stehen unter [HTTPS und Reverse Proxy](docs/reverse-proxy.md).
 
 Beim ersten Start wird der Benutzer aus `CP_ADMIN_USER` angelegt. Das Kennwort aus dem Docker Secret wird nur für die initiale Erstellung verwendet; persistent gespeichert wird ausschließlich der gesalzene scrypt-Hash.
 
@@ -99,7 +99,7 @@ Beim ersten Start wird der Benutzer aus `CP_ADMIN_USER` angelegt. Das Kennwort a
 | Variable | Standard | Beschreibung |
 | --- | --- | --- |
 | `TZ` | `Europe/Berlin` | Zeitzone des Containers |
-| `CP_PORT` | `8080` | interner Port der Weboberfläche |
+| `CP_PORT` | `8080` | interner HTTP- oder HTTPS-Port der Weboberfläche |
 | `CP_ADMIN_USER` | `admin` | initialer Administratorname |
 | `CP_ADMIN_PASSWORD_FILE` | `/run/secrets/admin_password` | Datei mit dem erforderlichen initialen Administratorkennwort |
 | `CP_SCAN_INTERVAL_MINUTES` | `60` | initiales Prüfintervall; spätere Änderungen erfolgen in der Weboberfläche |
@@ -107,6 +107,9 @@ Beim ersten Start wird der Benutzer aus `CP_ADMIN_USER` angelegt. Das Kennwort a
 | `CP_HEALTH_TIMEOUT_SECONDS` | `120` | maximale Wartezeit auf einen erfolgreichen Docker-Healthcheck |
 | `CP_STARTUP_GRACE_SECONDS` | `5` | Beobachtungszeit für Container ohne eigenen Healthcheck |
 | `CP_SECURE_COOKIE` | `false` | `true` hinter einem HTTPS-Reverse-Proxy; markiert das Sitzungscookie als Secure |
+| `CP_TLS_CERT_FILE` | nicht gesetzt | PEM-Zertifikat oder vollständige Zertifikatskette; aktiviert zusammen mit `CP_TLS_KEY_FILE` natives HTTPS |
+| `CP_TLS_KEY_FILE` | nicht gesetzt | PEM-Datei mit dem privaten Schlüssel für natives HTTPS |
+| `CP_TLS_KEY_PASSPHRASE_FILE` | nicht gesetzt | optionale Secret-Datei mit der Passphrase des privaten Schlüssels |
 | `CP_STORE_FILE` | `/data/state.json` | Pfad der persistenten Zustandsdatei |
 | `DOCKER_SOCKET` | `/var/run/docker.sock` | Pfad zum Docker-Unix-Socket |
 | `CP_SELF_UPDATE_REPOSITORY` | `DeepZone/container-pilot` | öffentliches GitHub-Repository für Release-Prüfungen |
@@ -126,7 +129,7 @@ Der eingebundene Docker-Socket ermöglicht weitreichende Kontrolle über den Doc
 
 - Weboberfläche nicht ungeschützt im öffentlichen Internet bereitstellen
 - `CP_BIND_ADDRESS=127.0.0.1` setzen, wenn ausschließlich ein lokaler Reverse Proxy zugreifen soll
-- hinter HTTPS `CP_SECURE_COOKIE=true` setzen
+- hinter einem HTTPS-Reverse-Proxy `CP_SECURE_COOKIE=true` setzen; bei nativem HTTPS geschieht das automatisch
 - starke, individuelle Kennwörter und möglichst restriktive Rollen verwenden
 - Zugriff auf Port `3080` per Firewall, VPN oder Reverse Proxy begrenzen
 - Docker-Socket niemals an nicht vertrauenswürdige Anwendungen weiterreichen

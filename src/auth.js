@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { tlsEnabled } from './tls.js';
 
 const sessions = new Map();
 const SESSION_TTL = 12 * 60 * 60 * 1000;
@@ -38,10 +39,10 @@ export function destroyUserSessions(username) {
 }
 
 export function sessionCookie(token) {
-  const secure = process.env.CP_SECURE_COOKIE === 'true' ? '; Secure' : '';
+  const secure = process.env.CP_SECURE_COOKIE === 'true' || tlsEnabled() ? '; Secure' : '';
   return `cp_session=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL / 1000}${secure}`;
 }
 export function clearSessionCookie() {
-  const secure = process.env.CP_SECURE_COOKIE === 'true' ? '; Secure' : '';
+  const secure = process.env.CP_SECURE_COOKIE === 'true' || tlsEnabled() ? '; Secure' : '';
   return `cp_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`;
 }

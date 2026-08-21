@@ -7,7 +7,7 @@
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `TZ` | `Europe/Berlin` | Container timezone |
-| `CP_PORT` | `8080` | Internal HTTP port |
+| `CP_PORT` | `8080` | Internal HTTP or HTTPS port |
 | `CP_ADMIN_USER` | `admin` | Initial administrator username |
 | `CP_ADMIN_PASSWORD_FILE` | `/run/secrets/admin_password` | Initial password secret file |
 | `CP_SCAN_INTERVAL_MINUTES` | `60` | Initial scan interval |
@@ -15,6 +15,9 @@
 | `CP_HEALTH_TIMEOUT_SECONDS` | `120` | Maximum healthcheck wait |
 | `CP_STARTUP_GRACE_SECONDS` | `5` | Stability window without a healthcheck |
 | `CP_SECURE_COOKIE` | `false` | Adds the Secure attribute to session cookies |
+| `CP_TLS_CERT_FILE` | unset | PEM certificate or full-chain file; enables native HTTPS together with `CP_TLS_KEY_FILE` |
+| `CP_TLS_KEY_FILE` | unset | PEM private-key file for native HTTPS |
+| `CP_TLS_KEY_PASSPHRASE_FILE` | unset | Optional file containing the private-key passphrase |
 | `CP_STORE_FILE` | `/data/state.json` | Persistent state path |
 | `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker API socket |
 | `CP_SELF_UPDATE_REPOSITORY` | `DeepZone/container-pilot` | GitHub release source |
@@ -36,3 +39,5 @@ Settings changed in the Web UI are persisted in `/data/state.json` and take prec
 Automatic installation requires both global automatic installation and the individual container policy. Automatic updates retain the configured tag and never switch a container to `latest`.
 
 Webhook enablement and its non-secret HTTPS URL are stored with the settings. Registry credentials and webhook bearer tokens are file-only secrets and are never persisted in the state store. See [Webhook notifications](notifications.md) and [Private registries](private-registries.md).
+
+Native HTTPS requires both certificate and private-key files. Container Pilot refuses to start when only one is configured. When native HTTPS is enabled, session cookies automatically receive the `Secure` attribute. See [Reverse proxy and HTTPS](reverse-proxy.md).
