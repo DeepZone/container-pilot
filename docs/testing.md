@@ -24,7 +24,9 @@ Record the original image, container state, expected result, actual result, even
 | Stopped container | Replacement remains stopped |
 | Fixed tag | Update stays on that tag |
 | Optional switch to `latest` | Requires explicit confirmation and creates a rollback point |
+| Successful manual rollback | Previous image is restored and the result is recorded in event history |
 | Failed manual rollback | Error is visible and current container remains identifiable |
+| Rollback disposal | Rollback action disappears and the unused retained image is removed only after confirmation |
 | Viewer account | Can inspect status but cannot mutate policies, users, or containers |
 | Concurrent actions | Second action for the same container is rejected |
 | Linux AMD64 host | Image starts and the complete update workflow succeeds |
