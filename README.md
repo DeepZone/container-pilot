@@ -23,9 +23,9 @@ The project is currently a **release candidate**. Test it with non-critical work
 
 ## Product preview
 
-![Authentic Container Pilot RC11 dashboard with anonymized demonstration data](docs/container-pilot-overview.png)
+![Authentic Container Pilot dashboard with anonymized demonstration data](docs/container-pilot-overview.png)
 
-*Authentic screenshot of the current RC11 interface. Only instance-specific data such as container names, image names, IDs, user name, and server address has been anonymized; the interface and displayed functions are unchanged.*
+*Authentic screenshot of the current interface. Only instance-specific data such as container names, image names, IDs, user name, and server address has been anonymized; the interface and displayed functions are unchanged.*
 
 ## Quick start
 
@@ -119,7 +119,7 @@ Published multi-architecture images are available from:
 ghcr.io/deepzone/container-pilot
 ```
 
-- Complete version tags such as `0.9.0-rc.11` are fixed release references and must never be reused.
+- Complete version tags such as `0.9.0-rc.12` are fixed release references and must never be reused.
 - Release candidates use the `rc` channel once published by the release workflow.
 - `latest`, major, and minor aliases are reserved for stable releases.
 - Successful builds from `main` use the moving `edge` tag and a commit-specific `sha-*` tag. They are development builds, not releases.
@@ -153,6 +153,10 @@ npm run test:integration
 Anonymous usage statistics are optional, disabled by default, and documented transparently in [Telemetry and privacy](docs/telemetry.md).
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+### Help test the release candidate
+
+Run RC12 on a non-critical workload and share what you learn. Use the [testing guide](docs/testing.md), report reproducible defects through [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose), and share broader test results or questions in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
 
 Do not publish credentials, tokens, private image names, internal addresses, or complete state files in issues. Report vulnerabilities according to [SECURITY.md](SECURITY.md).
 

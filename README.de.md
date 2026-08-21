@@ -22,9 +22,9 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 ## Einblick
 
-![Authentisches Container-Pilot-RC11-Dashboard mit anonymisierten Beispieldaten](docs/container-pilot-overview.png)
+![Authentisches Container-Pilot-Dashboard mit anonymisierten Beispieldaten](docs/container-pilot-overview.png)
 
-*Authentischer Screenshot der aktuellen RC11-Oberfläche. Ausschließlich instanzbezogene Daten wie Container- und Image-Namen, IDs, Benutzername und Serveradresse wurden anonymisiert; Oberfläche und dargestellte Funktionen sind unverändert.*
+*Authentischer Screenshot der aktuellen Oberfläche. Ausschließlich instanzbezogene Daten wie Container- und Image-Namen, IDs, Benutzername und Serveradresse wurden anonymisiert; Oberfläche und dargestellte Funktionen sind unverändert.*
 
 ## Warum ein eigener Docker Update Manager?
 
@@ -190,8 +190,8 @@ Veröffentlichte Releases werden erst nach erfolgreichen Tests als Multi-Arch-Im
 ## Hinweise und Einschränkungen
 
 - Der direkte Container-Ersatz verändert keine externe Compose-Datei. Ein späteres `docker compose up` kann einen über die Weboberfläche vorgenommenen Image- oder Tag-Wechsel wieder überschreiben.
-- Private Registries und authentifizierte private Images werden derzeit nicht unterstützt.
-- Registry-Prüfungen sind aktuell für Docker Hub und GHCR vorgesehen.
+- Private Docker-Hub-, GHCR-, GitLab- und generische OCI-Registries werden über Docker-Secret-Zugangsdaten unterstützt.
+- Registry-Prüfungen sind für Docker Hub, GHCR, GitLab und generische OCI-Registries vorgesehen.
 - Container ohne Docker-Healthcheck können nur auf Prozessstabilität während der Startbeobachtung geprüft werden.
 - Healthchecks bestätigen die technische Betriebsbereitschaft, ersetzen jedoch keine fachlichen End-to-End-Tests.
 - Image-Rollbacks setzen keine Volumes, Datenbanken oder Migrationen zurück.
@@ -202,6 +202,10 @@ Veröffentlichte Releases werden erst nach erfolgreichen Tests als Multi-Arch-Im
 Fehlerberichte und nachvollziehbare Verbesserungsvorschläge sind willkommen. Bitte niemals Kennwörter, Registry-Tokens, private Image-Namen, vollständige Zustandsdateien, interne Hostnamen oder produktive Ereignisprotokolle in Issues veröffentlichen. Für Beispiele ausschließlich anonymisierte Daten verwenden.
 
 Die ausführliche Dokumentation wird zunächst auf Englisch unter [`docs/`](docs/) gepflegt. Beiträge für eine vollständige deutsche Übersetzung sind willkommen.
+
+### Beim Testen des Release Candidates helfen
+
+RC12 auf einer unkritischen Arbeitslast ausführen und die Erfahrungen teilen: Der [Testleitfaden](docs/testing.md) beschreibt die wichtigsten Szenarien. Reproduzierbare Fehler bitte über [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose) melden; allgemeine Testergebnisse und Fragen gehören in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
 
 ## Lizenz und Copyright
 

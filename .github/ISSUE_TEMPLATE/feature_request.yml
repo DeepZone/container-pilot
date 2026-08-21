@@ -3,6 +3,9 @@ description: Suggest a focused improvement
 title: "[Feature]: "
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: "Privacy: describe the use case without credentials, private image or registry names, internal hostnames or IP addresses, environment values, mount paths, or other identifying data."
   - type: textarea
     id: problem
     attributes:
