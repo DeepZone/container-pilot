@@ -1,9 +1,0 @@
-node_modules
-tests
-secrets
-.env
-*.log
-._*
-**/._*
-README.md
-compose.yml
