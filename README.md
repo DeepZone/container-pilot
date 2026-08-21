@@ -23,9 +23,9 @@ The project is currently a **release candidate**. Test it with non-critical work
 
 ## Product preview
 
-![Complete Container Pilot RC11 dashboard with fictional containers, health states, updates, automation, and rollback actions](docs/container-pilot-overview.png)
+![Authentic Container Pilot RC11 dashboard with anonymized demonstration data](docs/container-pilot-overview.png)
 
-*A complete RC11 product view using fictional data to demonstrate running and stopped containers, health states, available updates, per-container automation, manual actions, and rollback controls at a glance.*
+*Authentic screenshot of the current RC11 interface. Only instance-specific data such as container names, image names, IDs, user name, and server address has been anonymized; the interface and displayed functions are unchanged.*
 
 ## Quick start
 
