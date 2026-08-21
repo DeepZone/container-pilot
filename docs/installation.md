@@ -33,7 +33,7 @@ Then open `https://YOUR-DOCKER-HOST:3080`. See [HTTPS and reverse proxy](reverse
 The Compose file defaults to the current release candidate until the first stable release exists. To select an explicit published image without editing the file:
 
 ```bash
-CP_IMAGE=ghcr.io/deepzone/container-pilot:0.9.0-rc.8 docker compose up -d
+CP_IMAGE=ghcr.io/deepzone/container-pilot:0.9.0-rc.9 docker compose up -d
 ```
 
 After a stable release is published, select the stable channel with `CP_IMAGE=ghcr.io/deepzone/container-pilot:latest` and `CP_SELF_UPDATE_CHANNEL=stable`. The `latest` tag is never published for a release candidate.
