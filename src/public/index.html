@@ -27,7 +27,7 @@
       </div>
       <nav class="mainNav" aria-label="Main navigation">
         <div class="navPages"><button id="containersButton" class="pageNav active" data-i18n="containers"></button><button id="eventsButton" class="pageNav" data-i18n="events"></button></div>
-        <div class="navTools"><button id="settingsButton" data-i18n="automation"></button><button id="watchtowerButton" data-i18n="watchtowerImport" hidden></button><button id="selfUpdateButton" data-i18n="systemUpdate"></button><button id="usersButton" data-i18n="users"></button><button id="scan" class="primary scanButton" data-i18n="scanNow"></button></div>
+        <div class="navTools"><button id="settingsButton" data-i18n="automation"></button><button id="telemetryButton" data-i18n="telemetry"></button><button id="watchtowerButton" data-i18n="watchtowerImport" hidden></button><button id="selfUpdateButton" data-i18n="systemUpdate"></button><button id="usersButton" data-i18n="users"></button><button id="scan" class="primary scanButton" data-i18n="scanNow"></button></div>
       </nav>
     </header>
     <main>
@@ -56,6 +56,14 @@
       <p class="warningBox" data-i18n="rollbackWarning"></p>
       <button class="primary" data-i18n="saveSettings"></button>
     </form>
+  </dialog>
+  <dialog id="telemetryDialog">
+    <div class="dialogHead"><h2 data-i18n="anonymousStatistics"></h2><button type="button" data-close-telemetry data-i18n="close"></button></div>
+    <p data-i18n="telemetryHelp"></p><p class="muted" data-i18n="telemetryExcludes"></p>
+    <div id="telemetryStatus" class="telemetryStatus"></div>
+    <label id="telemetryToggleRow" class="toggle"><input id="telemetryEnabled" type="checkbox"> <span data-i18n="shareStatistics"></span></label>
+    <div class="dialogActions"><button id="previewTelemetry" type="button" data-i18n="previewData"></button><button id="sendTelemetry" type="button" class="primary" data-i18n="sendNow"></button><button id="resetTelemetry" type="button" data-i18n="resetTelemetryIdentity"></button><button id="deleteTelemetry" type="button" class="danger" data-i18n="deleteServerData"></button></div>
+    <pre id="telemetryPreview" class="payloadPreview" hidden></pre><p id="telemetryNotice" class="muted"></p>
   </dialog>
   <dialog id="selfUpdateDialog">
     <div class="dialogHead"><h2 data-i18n="updateContainerPilot"></h2><button type="button" data-close-self-update data-i18n="close"></button></div>
