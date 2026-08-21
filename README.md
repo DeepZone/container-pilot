@@ -23,9 +23,9 @@ The project is currently a **release candidate**. Test it with non-critical work
 
 ## Product preview
 
-![Container Pilot dashboard showing container status and the latest update scan](docs/container-pilot-overview.jpg)
+![Complete Container Pilot RC11 dashboard with fictional containers, health states, updates, automation, and rollback actions](docs/container-pilot-overview.png)
 
-*An anonymized dashboard overview with container health, available updates, automatic scan timing, and the latest scan result.*
+*A complete RC11 product view using fictional data to demonstrate running and stopped containers, health states, available updates, per-container automation, manual actions, and rollback controls at a glance.*
 
 ## Quick start
 

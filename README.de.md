@@ -22,9 +22,9 @@ Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigur
 
 ## Einblick
 
-![Container-Pilot-Übersicht mit Containerstatus und letzter Update-Prüfung](docs/container-pilot-overview.jpg)
+![Vollständiges Container-Pilot-RC11-Dashboard mit fiktiven Containern, Status, Updates, Automatik und Rollback-Aktionen](docs/container-pilot-overview.png)
 
-*Anonymisierte Produktansicht mit Containerstatus, verfügbaren Updates, Zeitplanung der automatischen Prüfung und dem letzten Prüfergebnis.*
+*Vollständige RC11-Produktansicht mit rein fiktiven Daten: laufende und gestoppte Container, Health-Status, verfügbare Updates, Automatik pro Container, manuelle Aktionen und Rollback-Funktionen sind auf einen Blick sichtbar.*
 
 ## Warum ein eigener Docker Update Manager?
 
