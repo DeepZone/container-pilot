@@ -4,7 +4,7 @@ An independently deployable Node.js 24 and PostgreSQL 16 service for Container P
 
 ## Architecture
 
-The tracker opens two independent listeners: public ingest on port `3090` and the authenticated internal dashboard on `3091`. The public listener implements only `POST /api/v1/telemetry`, `DELETE /api/v1/telemetry/:installation_id`, and `GET /healthz`; dashboard and statistics routes do not exist there. PostgreSQL has no published host port.
+The tracker opens two independent listeners: public ingest on port `3090` and the authenticated internal dashboard on `3091`. The public listener implements only `POST /api/v1/telemetry`, `DELETE /api/v1/telemetry/:installation_id`, and `GET /healthz`; dashboard and statistics routes do not exist there. PostgreSQL has no published host port. Both listeners default to the loopback interface. If a reverse proxy runs on another private host, set `TRACKER_API_HOST` and `TRACKER_DASHBOARD_HOST` to the tracker's private address and restrict both ports to the proxy at the firewall.
 
 ## Installation and secrets
 
@@ -13,11 +13,13 @@ mkdir -p secrets
 openssl rand -base64 36 > secrets/admin_password
 openssl rand -base64 36 > secrets/postgres_password
 cp .env.example .env
-chmod 600 secrets/* .env
+chmod 700 secrets
+chmod 644 secrets/*
+chmod 600 .env
 docker compose up -d --build
 ```
 
-Secrets and `.env` are excluded from Git and the Docker build context. Never place passwords in Compose. The dashboard defaults to `127.0.0.1:3091`. For a private management LAN, set `TRACKER_DASHBOARD_HOST` to the host's private address and restrict it with a firewall. Set `TRACKER_SECURE_COOKIE=true` when the dashboard uses internal HTTPS.
+Secrets and `.env` are excluded from Git and the Docker build context. Never place passwords in Compose. The host-side `secrets` directory remains root-only while its files must be readable by the distinct unprivileged users inside the tracker and PostgreSQL containers. The dashboard defaults to `127.0.0.1:3091`. For a private management LAN, set `TRACKER_DASHBOARD_HOST` to the host's private address and restrict it with a firewall. Set `TRACKER_SECURE_COOKIE=true` when the dashboard uses internal HTTPS.
 
 ## Database, retention, and migrations
 

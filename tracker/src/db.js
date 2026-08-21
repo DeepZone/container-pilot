@@ -12,10 +12,16 @@ export const pool = new pg.Pool(process.env.DATABASE_URL ? { connectionString: p
 export async function migrate(db = pool) {
   await db.query('CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())');
   const applied = new Set((await db.query('SELECT version FROM schema_migrations')).rows.map(row => row.version));
-  for (const name of fs.readdirSync(migrationDir).filter(file => file.endsWith('.sql')).sort()) {
+  for (const name of fs.readdirSync(migrationDir).filter(file => !file.startsWith('.') && file.endsWith('.sql')).sort()) {
     if (applied.has(name)) continue;
     const client = await db.connect();
-    try { await client.query('BEGIN'); await client.query(fs.readFileSync(path.join(migrationDir, name), 'utf8')); await client.query('INSERT INTO schema_migrations(version) VALUES($1)', [name]); await client.query('COMMIT'); }
+    try {
+      await client.query('BEGIN');
+      const statements = fs.readFileSync(path.join(migrationDir, name), 'utf8').split(/;\s*(?:\r?\n|$)/).map(statement => statement.trim()).filter(Boolean);
+      for (const statement of statements) await client.query({ text: statement, queryMode: 'simple' });
+      await client.query('INSERT INTO schema_migrations(version) VALUES($1)', [name]);
+      await client.query('COMMIT');
+    }
     catch (error) { await client.query('ROLLBACK'); throw error; } finally { client.release(); }
   }
 }

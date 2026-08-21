@@ -14,7 +14,7 @@ services:
       TRACKER_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       TRACKER_ADMIN_PASSWORD_FILE: /run/secrets/admin_password
     ports:
-      - "127.0.0.1:3090:3090"
+      - "${TRACKER_API_HOST:-127.0.0.1}:3090:3090"
       - "${TRACKER_DASHBOARD_HOST:-127.0.0.1}:3091:3091"
     secrets:
       - admin_password
