@@ -17,11 +17,15 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tracker/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix tracker
       - name: Check JavaScript syntax
-        run: find src tests -name '*.js' -print0 | xargs -0 -n1 node --check
+        run: find src tests tracker/src tracker/public tracker/tests -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Parse YAML
-        run: ruby -e 'require "yaml"; Dir[".github/**/*.yml", "compose*.yml"].flatten.each { |file| YAML.load_file(file) }'
+        run: ruby -e 'require "yaml"; Dir[".github/**/*.yml", "compose*.yml", "tracker/compose.yml"].flatten.each { |file| YAML.load_file(file) }'
       - run: git diff --check
 
   test:
@@ -34,21 +38,47 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tracker/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix tracker
       - run: npm test
+      - run: npm test --prefix tracker
 
   integration-test:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: container_pilot
+          POSTGRES_USER: tracker
+          POSTGRES_PASSWORD: tracker-integration-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tracker -d container_pilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tracker/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix tracker
       - run: npm run test:integration
+      - run: npm run test:integration --prefix tracker
+        env:
+          DATABASE_URL: postgresql://tracker:tracker-integration-password@127.0.0.1:5432/container_pilot
 
   security-check:
     needs: lint
@@ -60,8 +90,13 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tracker/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix tracker
       - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --prefix tracker --omit=dev --audit-level=high
 
   docker-build:
     needs: [integration-test, security-check]
@@ -78,3 +113,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./tracker
+          push: false
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=tracker
+          cache-to: type=gha,mode=max,scope=tracker

@@ -7,7 +7,7 @@
   <p>A Docker update manager with a Web UI, per-container policies, health checks, and automatic rollback.</p>
   <p><strong>A safer Watchtower alternative focused on control and recovery.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC10" src="https://img.shields.io/badge/version-0.9.0--rc.10-d97706">
+    <img alt="Version 0.9.0 RC11" src="https://img.shields.io/badge/version-0.9.0--rc.11-d97706">
     <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="AMD64 and ARM64" src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-2496ed">
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c3aed">
@@ -72,6 +72,15 @@ Detect → Decide → Update → Verify → Recover
 - Container configuration reconstruction, including mounts, networks, ports, environment, and restart policy
 - Safe self-update flow through a separate helper container
 - Opt-in Watchtower policy import with a read-only preview and per-rule confirmation
+- Optional anonymous usage statistics with an exact payload preview and full administrator control
+
+## Optional anonymous usage statistics
+
+Container Pilot includes voluntary, privacy-minimizing usage statistics to help us understand how the project behaves across real installations and different deployment scenarios. **The feature is disabled by default and sends nothing until an administrator explicitly enables it.**
+
+When enabled, only the smallest useful set of aggregated technical data is reported, such as the Container Pilot and Docker versions, architecture, general operating system, aggregate container counts, enabled feature categories, and cumulative update results. Container Pilot never reports container or image names, IP addresses, hostnames, registry domains, credentials, environment variables, mount paths, or application data. The Web UI shows the exact payload before it is sent, and reporting can be disabled or deleted at any time.
+
+We appreciate every administrator who voluntarily enables this feature. These anonymous field insights help us prioritize compatibility, reliability, and accessibility work so Container Pilot can serve as many environments and users as possible. Full details are available in [Telemetry and privacy](docs/telemetry.md).
 
 ## Important safety boundary
 
@@ -97,6 +106,7 @@ Read [Security](docs/security.md), [Updates](docs/updates.md), and [Rollback](do
 - [Release-candidate testing](docs/testing.md)
 - [Webhook notifications](docs/notifications.md)
 - [Private registries](docs/private-registries.md)
+- [Telemetry and privacy](docs/telemetry.md)
 - [Project website](https://deepzone.github.io/container-pilot/)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
@@ -109,7 +119,7 @@ Published multi-architecture images are available from:
 ghcr.io/deepzone/container-pilot
 ```
 
-- Complete version tags such as `0.9.0-rc.10` are fixed release references and must never be reused.
+- Complete version tags such as `0.9.0-rc.11` are fixed release references and must never be reused.
 - Release candidates use the `rc` channel once published by the release workflow.
 - `latest`, major, and minor aliases are reserved for stable releases.
 - Successful builds from `main` use the moving `edge` tag and a commit-specific `sha-*` tag. They are development builds, not releases.
@@ -139,6 +149,8 @@ npm run test:integration
 - The Web UI supports English and German with browser detection and a persistent manual selector.
 
 ## Contributing and security
+
+Anonymous usage statistics are optional, disabled by default, and documented transparently in [Telemetry and privacy](docs/telemetry.md).
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 

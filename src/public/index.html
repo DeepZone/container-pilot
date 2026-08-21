@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Container Pilot</title>
-  <link rel="icon" href="logo.png?v=0.9.0-rc.10" type="image/png">
-  <link rel="stylesheet" href="app.css?v=0.9.0-rc.10">
+  <link rel="icon" href="logo.png?v=0.9.0-rc.11" type="image/png">
+  <link rel="stylesheet" href="app.css?v=0.9.0-rc.11">
 </head>
 <body>
   <section id="loginView" class="login">
     <form id="loginForm" class="panel">
-      <img class="loginLogo" src="logo.png?v=0.9.0-rc.10" alt="Container Pilot Logo">
+      <img class="loginLogo" src="logo.png?v=0.9.0-rc.11" alt="Container Pilot Logo">
       <h1>Container Pilot</h1><p data-i18n="tagline"></p>
       <label><span data-i18n="username"></span><input name="username" autocomplete="username" required></label>
       <label><span data-i18n="password"></span><input name="password" type="password" autocomplete="current-password" required></label>
@@ -22,12 +22,12 @@
   <div id="app" hidden>
     <header class="appHeader">
       <div class="headerTop">
-        <div class="brand"><img src="logo.png?v=0.9.0-rc.10" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p data-i18n="tagline"></p></div></div>
+        <div class="brand"><img src="logo.png?v=0.9.0-rc.11" alt="Container Pilot Logo"><div><h1>Container Pilot</h1><p data-i18n="tagline"></p></div></div>
         <div class="accountMenu"><span id="who"></span><select data-language aria-label="Language"><option value="en">English</option><option value="de">Deutsch</option></select><button id="logout" class="quietButton" data-i18n="signOut"></button></div>
       </div>
       <nav class="mainNav" aria-label="Main navigation">
         <div class="navPages"><button id="containersButton" class="pageNav active" data-i18n="containers"></button><button id="eventsButton" class="pageNav" data-i18n="events"></button></div>
-        <div class="navTools"><button id="settingsButton" data-i18n="automation"></button><button id="watchtowerButton" data-i18n="watchtowerImport" hidden></button><button id="selfUpdateButton" data-i18n="systemUpdate"></button><button id="usersButton" data-i18n="users"></button><button id="scan" class="primary scanButton" data-i18n="scanNow"></button></div>
+        <div class="navTools"><button id="settingsButton" data-i18n="automation"></button><button id="telemetryButton" data-i18n="telemetry"></button><button id="watchtowerButton" data-i18n="watchtowerImport" hidden></button><button id="selfUpdateButton" data-i18n="systemUpdate"></button><button id="usersButton" data-i18n="users"></button><button id="scan" class="primary scanButton" data-i18n="scanNow"></button></div>
       </nav>
     </header>
     <main>
@@ -57,6 +57,14 @@
       <button class="primary" data-i18n="saveSettings"></button>
     </form>
   </dialog>
+  <dialog id="telemetryDialog">
+    <div class="dialogHead"><h2 data-i18n="anonymousStatistics"></h2><button type="button" data-close-telemetry data-i18n="close"></button></div>
+    <p data-i18n="telemetryHelp"></p><p class="muted" data-i18n="telemetryExcludes"></p>
+    <div id="telemetryStatus" class="telemetryStatus"></div>
+    <label id="telemetryToggleRow" class="toggle"><input id="telemetryEnabled" type="checkbox"> <span data-i18n="shareStatistics"></span></label>
+    <div class="dialogActions"><button id="previewTelemetry" type="button" data-i18n="previewData"></button><button id="sendTelemetry" type="button" class="primary" data-i18n="sendNow"></button><button id="resetTelemetry" type="button" data-i18n="resetTelemetryIdentity"></button><button id="deleteTelemetry" type="button" class="danger" data-i18n="deleteServerData"></button></div>
+    <pre id="telemetryPreview" class="payloadPreview" hidden></pre><p id="telemetryNotice" class="muted"></p>
+  </dialog>
   <dialog id="selfUpdateDialog">
     <div class="dialogHead"><h2 data-i18n="updateContainerPilot"></h2><button type="button" data-close-self-update data-i18n="close"></button></div>
     <div class="settingsForm">
@@ -75,6 +83,6 @@
     <div id="watchtowerList"></div>
     <div class="dialogActions"><button id="reloadWatchtower" type="button" data-i18n="refresh"></button><button id="importWatchtower" type="button" class="primary" data-i18n="importSelected"></button></div>
   </dialog>
-  <script type="module" src="app.js?v=0.9.0-rc.10"></script>
+  <script type="module" src="app.js?v=0.9.0-rc.11"></script>
 </body>
 </html>
