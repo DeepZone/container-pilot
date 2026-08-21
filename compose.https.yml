@@ -1,0 +1,15 @@
+services:
+  container-pilot:
+    environment:
+      CP_TLS_CERT_FILE: /run/secrets/tls_cert
+      CP_TLS_KEY_FILE: /run/secrets/tls_key
+      CP_SECURE_COOKIE: "true"
+    secrets:
+      - tls_cert
+      - tls_key
+
+secrets:
+  tls_cert:
+    file: ./secrets/tls.crt
+  tls_key:
+    file: ./secrets/tls.key

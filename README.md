@@ -37,6 +37,8 @@ docker compose up -d
 
 Open `http://YOUR-DOCKER-HOST:3080`. The initial account is `admin`; its generated password is stored in `secrets/admin_password`. Change the password after the first login.
 
+Native HTTPS is available through `compose.https.yml`; an HTTPS reverse proxy remains supported. See [HTTPS and reverse proxy](docs/reverse-proxy.md).
+
 > Container Pilot requires write access to `/var/run/docker.sock`. Treat administrator access to its Web UI as privileged access to the Docker host. Do not expose it directly to the public Internet.
 
 See [Installation](docs/installation.md) for localhost binding, upgrades, and a minimal Compose example.

@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,7 @@ import { sendWebhook, validateWebhookUrl } from './notifications.js';
 import { configuredRegistries } from './registry-auth.js';
 import { applyWatchtowerImport, watchtowerImportPreview } from './watchtower-import.js';
 import { requireCsrf, sameOrigin } from './http-security.js';
+import { loadTlsOptions } from './tls.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
@@ -360,9 +362,10 @@ async function api(req, res, url, session) {
   return json(res, 404, { error: 'Nicht gefunden' });
 }
 
-const server = http.createServer(async (req, res) => {
+const tlsOptions = loadTlsOptions();
+const requestHandler = async (req, res) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`); const session = readSession(req.headers.cookie);
+    const url = new URL(req.url, `${tlsOptions ? 'https' : 'http'}://${req.headers.host}`); const session = readSession(req.headers.cookie);
     if (url.pathname.startsWith('/api/')) return await api(req, res, url, session);
     const requested = url.pathname === '/' ? 'index.html' : url.pathname === '/favicon.ico' ? 'logo.png' : url.pathname.slice(1); const full = path.resolve(root, requested);
     if (!full.startsWith(`${root}${path.sep}`) && full !== path.join(root, 'index.html')) return res.writeHead(403).end();
@@ -374,8 +377,9 @@ const server = http.createServer(async (req, res) => {
             : 'text/html';
     res.writeHead(200, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'content-security-policy': "default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'", 'permissions-policy': 'camera=(), microphone=(), geolocation=()', 'referrer-policy': 'no-referrer' }); res.end(data);
   } catch (error) { console.error(error); json(res, error.status || 500, { error: error.message }); }
-});
-server.listen(port, '0.0.0.0', () => console.log(`Container Pilot lauscht auf Port ${port}`));
+};
+const server = tlsOptions ? https.createServer(tlsOptions, requestHandler) : http.createServer(requestHandler);
+server.listen(port, '0.0.0.0', () => console.log(`Container Pilot lauscht per ${tlsOptions ? 'HTTPS' : 'HTTP'} auf Port ${port}`));
 setTimeout(async () => {
   if (getStore().settings.enabled) await scanAll();
   scheduleNextScan();

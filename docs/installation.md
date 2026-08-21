@@ -22,6 +22,14 @@ docker compose up -d
 
 Open `http://YOUR-DOCKER-HOST:3080` and sign in as `admin` with the generated password. Change it after the first login.
 
+For direct HTTPS without a reverse proxy, provide certificate files and add the supplied override:
+
+```bash
+docker compose -f compose.yml -f compose.https.yml up -d
+```
+
+Then open `https://YOUR-DOCKER-HOST:3080`. See [HTTPS and reverse proxy](reverse-proxy.md) for certificate requirements and a localhost test certificate.
+
 The Compose file defaults to the current release candidate until the first stable release exists. To select an explicit published image without editing the file:
 
 ```bash
@@ -38,7 +46,7 @@ For a reverse proxy running on the Docker host:
 CP_BIND_ADDRESS=127.0.0.1 docker compose up -d
 ```
 
-Set `CP_SECURE_COOKIE=true` in `compose.yml` when the external URL uses HTTPS.
+Set `CP_SECURE_COOKIE=true` in `compose.yml` when the external URL uses HTTPS. Native HTTPS does this automatically through `compose.https.yml`.
 
 ## Upgrade
 

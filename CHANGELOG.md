@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added optional native HTTPS with file-based certificate and private-key secrets, automatic Secure session cookies, TLS-aware health checks, and a dedicated Compose override.
+
 ## 0.9.0-rc.8
 
 - Hide the Watchtower import action unless an administrator has containers with supported Watchtower labels, and reorganize the application navigation into clearer page, administration, action, and account areas.
