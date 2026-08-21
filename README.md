@@ -7,7 +7,7 @@
   <p>A Docker update manager with a Web UI, per-container policies, health checks, and automatic rollback.</p>
   <p><strong>A safer Watchtower alternative focused on control and recovery.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC9" src="https://img.shields.io/badge/version-0.9.0--rc.9-d97706">
+    <img alt="Version 0.9.0 RC10" src="https://img.shields.io/badge/version-0.9.0--rc.10-d97706">
     <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="AMD64 and ARM64" src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-2496ed">
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c3aed">
@@ -20,6 +20,12 @@
 Container Pilot detects Docker image updates, lets administrators approve or automate them per container, validates the replacement container, and restores the previous container automatically when startup or health validation fails.
 
 The project is currently a **release candidate**. Test it with non-critical workloads before enabling automatic updates broadly.
+
+## Product preview
+
+![Container Pilot dashboard showing container status and the latest update scan](docs/container-pilot-overview.jpg)
+
+*An anonymized dashboard overview with container health, available updates, automatic scan timing, and the latest scan result.*
 
 ## Quick start
 
@@ -103,7 +109,7 @@ Published multi-architecture images are available from:
 ghcr.io/deepzone/container-pilot
 ```
 
-- Complete version tags such as `0.9.0-rc.9` are fixed release references and must never be reused.
+- Complete version tags such as `0.9.0-rc.10` are fixed release references and must never be reused.
 - Release candidates use the `rc` channel once published by the release workflow.
 - `latest`, major, and minor aliases are reserved for stable releases.
 - Successful builds from `main` use the moving `edge` tag and a commit-specific `sha-*` tag. They are development builds, not releases.
