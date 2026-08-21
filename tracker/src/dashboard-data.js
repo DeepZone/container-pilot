@@ -21,12 +21,12 @@ export async function summary(days = 30, db = pool) {
       greatest(automatic_rollbacks-lag(automatic_rollbacks,1,automatic_rollbacks) OVER(PARTITION BY installation_id ORDER BY received_at),0) rollback_delta
       FROM reports WHERE received_at >= now()-($1*interval '1 day')
     ), changes AS (
-      SELECT received_at::date day,count(*)::int reports,sum(success_delta)::int successful_updates,sum(failed_delta)::int failed_updates,sum(rollback_delta)::int automatic_rollbacks FROM raw GROUP BY received_at::date
+      SELECT received_at::date AS report_day,count(*)::int AS reports,sum(success_delta)::int AS successful_updates,sum(failed_delta)::int AS failed_updates,sum(rollback_delta)::int AS automatic_rollbacks FROM raw GROUP BY received_at::date
     ), daily AS (
-      SELECT DISTINCT ON (received_at::date,installation_id) received_at::date day,installation_id,containers_total FROM reports WHERE received_at >= now()-($1*interval '1 day') ORDER BY received_at::date,installation_id,received_at DESC
+      SELECT DISTINCT ON (received_at::date,installation_id) received_at::date AS report_day,installation_id,containers_total FROM reports WHERE received_at >= now()-($1*interval '1 day') ORDER BY received_at::date,installation_id,received_at DESC
     ), totals AS (
-      SELECT day,count(*)::int active,sum(containers_total)::int containers FROM daily GROUP BY day
-    ) SELECT totals.*,changes.reports,changes.successful_updates,changes.failed_updates,changes.automatic_rollbacks FROM totals JOIN changes USING(day) ORDER BY day`, [range]);
+      SELECT report_day,count(*)::int AS active,sum(containers_total)::int AS containers FROM daily GROUP BY report_day
+    ) SELECT totals.report_day AS day,totals.active,totals.containers,changes.reports,changes.successful_updates,changes.failed_updates,changes.automatic_rollbacks FROM totals JOIN changes USING(report_day) ORDER BY report_day`, [range]);
   return { ...current.rows[0], features: feature.rows[0], architectures: await group('architecture'), versions: await group('container_pilot_version'), dockerVersions: await group("split_part(docker_version,'.',1)||'.x'"), dockerVersionDetails: await group('docker_version'), operatingSystems: await group('operating_system'), timeline: timeline.rows, days: range };
 }
 
