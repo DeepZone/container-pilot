@@ -24,9 +24,19 @@ Record the original image, container state, expected result, actual result, even
 | Stopped container | Replacement remains stopped |
 | Fixed tag | Update stays on that tag |
 | Optional switch to `latest` | Requires explicit confirmation and creates a rollback point |
+| Successful manual rollback | Previous image is restored and the result is recorded in event history |
 | Failed manual rollback | Error is visible and current container remains identifiable |
+| Rollback disposal | Rollback action disappears and the unused retained image is removed only after confirmation |
 | Viewer account | Can inspect status but cannot mutate policies, users, or containers |
 | Concurrent actions | Second action for the same container is rejected |
+| Linux AMD64 host | Image starts and the complete update workflow succeeds |
+| Linux ARM64 host | Image starts and the complete update workflow succeeds |
+| Private registry | Credential secret is used without exposing registry details in events or reports |
+| Watchtower migration | Supported labels are previewed and only confirmed policies are imported |
+| Container Pilot self-update | Helper validates the replacement and reports a clear final result |
+| Self-update failure | Previous Container Pilot image is restored |
+| HTTPS reverse proxy | Login, sessions, and mutations work with secure cookies enabled |
+| Native HTTPS | UI and health endpoint are served with the configured certificate |
 
 ## Reproducible update fixtures
 
@@ -50,4 +60,4 @@ Use the **Release candidate feedback** issue form. Include:
 - the action, expected result, actual result, and exact timestamp
 - relevant event types and sanitized error messages
 
-Never include passwords, registry tokens, cookies, CSRF tokens, environment-variable values, private image names, internal domains or addresses, full state files, or unredacted Docker inspection output.
+Never include passwords, registry tokens, cookies, CSRF tokens, environment-variable values, private image names, private registry URLs, internal hostnames or IP addresses, mount paths, full environment dumps, full state files, or unredacted Docker inspection output.
