@@ -7,7 +7,7 @@
   <p>A Docker update manager with a Web UI, per-container policies, health checks, and automatic rollback.</p>
   <p><strong>A safer Watchtower alternative focused on control and recovery.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC11" src="https://img.shields.io/badge/version-0.9.0--rc.11-d97706">
+    <img alt="Version 0.9.0 RC12" src="https://img.shields.io/badge/version-0.9.0--rc.12-d97706">
     <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="AMD64 and ARM64" src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-2496ed">
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c3aed">

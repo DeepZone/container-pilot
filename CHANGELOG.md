@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.9.0-rc.12
+
+- Fixed persistence of the last successful telemetry report and status after payload generation.
+- Preserved the live telemetry state object while filling missing fields.
+- Added regression coverage for successful report timestamps.
+
 ## 0.9.0-rc.11
 
 - Added explicit opt-in anonymous telemetry with a live payload preview, daily jittered reporting, fail-open delivery, local reset/server deletion controls, and persistent update and rollback counters.

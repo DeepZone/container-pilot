@@ -10,7 +10,11 @@ export const JITTER_MIN_MS = 2 * 60_000;
 export const JITTER_MAX_MS = 15 * 60_000;
 
 export function ensureTelemetryState(store) {
-  store.telemetry = { ...defaultTelemetryState(), ...(store.telemetry || {}) };
+  if (!store.telemetry || typeof store.telemetry !== 'object') store.telemetry = defaultTelemetryState();
+  else {
+    const defaults = defaultTelemetryState();
+    for (const [key, value] of Object.entries(defaults)) if (store.telemetry[key] === undefined) store.telemetry[key] = value;
+  }
   return store.telemetry;
 }
 
