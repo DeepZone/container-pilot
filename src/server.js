@@ -13,6 +13,7 @@ import { configuredRegistries } from './registry-auth.js';
 import { applyWatchtowerImport, watchtowerImportPreview } from './watchtower-import.js';
 import { requireCsrf, sameOrigin } from './http-security.js';
 import { loadTlsOptions } from './tls.js';
+import { buildTelemetryPayload, enableTelemetry, ensureTelemetryState, incrementTelemetryCounter, nextAutomaticReport, randomJitter, resetTelemetryIdentity, sendTelemetry, telemetryUrl, REPORT_INTERVAL_MS } from './telemetry.js';
 
 loadStore();
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
@@ -36,6 +37,8 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1_000;
 const LOGIN_MAX_ATTEMPTS = 10;
 let selfUpdateCheck = null;
 let selfUpdateCheckedAt = 0;
+let telemetryTimer = null;
+let nextTelemetryAt = null;
 
 async function currentSelfUpdate(force = false) {
   if (!force && selfUpdateCheck && Date.now() - selfUpdateCheckedAt < 5 * 60_000) return selfUpdateCheck;
@@ -77,8 +80,34 @@ function publicSettings(session) {
 function healthFailure(error) { return /healthcheck|unhealthy|startprüfung|startup|während der start/i.test(error.message); }
 
 function recordActionFailure(type, session, container, image, error) {
+  if (type === 'update-failed') {
+    incrementTelemetryCounter(getStore(), 'failed_updates');
+    if (/Update zurückgerollt:/i.test(error.message)) incrementTelemetryCounter(getStore(), 'automatic_rollbacks');
+    saveStore();
+  }
   addEvent({ type, actor: session?.username || null, container, image, result: 'error', message: error.message });
   if (healthFailure(error)) addEvent({ type: 'healthcheck-failed', actor: session?.username || null, container, image, result: 'error', message: error.message });
+}
+
+const telemetryPayload = () => buildTelemetryPayload({ store: getStore(), version: appVersion, nativeHttps: Boolean(tlsOptions) });
+async function reportTelemetry() {
+  const state = ensureTelemetryState(getStore());
+  if (!state.enabled) return { ok: false, error: 'disabled' };
+  const result = await sendTelemetry({ store: getStore(), buildPayload: telemetryPayload });
+  saveStore();
+  return result;
+}
+function scheduleTelemetry(startup = false) {
+  if (telemetryTimer) clearTimeout(telemetryTimer);
+  telemetryTimer = null;
+  nextTelemetryAt = null;
+  const state = ensureTelemetryState(getStore());
+  if (!state.enabled) return;
+  const last = state.last_attempt ? new Date(state.last_attempt).getTime() : 0;
+  const remaining = Math.max(0, last + REPORT_INTERVAL_MS - Date.now());
+  const delay = remaining || (startup ? randomJitter() : REPORT_INTERVAL_MS);
+  nextTelemetryAt = new Date(Date.now() + delay).toISOString();
+  telemetryTimer = setTimeout(async () => { await reportTelemetry(); scheduleTelemetry(); }, delay);
 }
 
 function scheduleNextScan(delayMinutes = getStore().settings.intervalMinutes) {
@@ -152,6 +181,7 @@ async function scanAll(trigger = 'scheduled', actor = null) {
             result.installed += 1;
             addEvent({ type: 'auto-update', container: c.name, image: c.image, result: 'success' });
             addEvent({ type: 'update-successful', container: c.name, image: c.image, result: 'success', message: 'Automatic update completed' });
+            incrementTelemetryCounter(store, 'successful_updates'); saveStore();
           });
         }
       } catch (error) {
@@ -190,14 +220,15 @@ async function api(req, res, url, session) {
   }
   if (!session) return json(res, 401, { error: 'Anmeldung erforderlich' });
   if (req.method === 'GET' && url.pathname === '/api/session') return json(res, 200, { user: { username: session.username, role: session.role }, csrf: session.csrf, version: appVersion });
-  if (req.method === 'POST') requireCsrf(req, session);
+  if (['POST', 'DELETE'].includes(req.method)) requireCsrf(req, session);
   if (req.method === 'POST' && url.pathname === '/api/logout') {
     destroySession(session.token); return json(res, 200, { ok: true }, { 'set-cookie': clearSessionCookie() });
   }
   if (req.method === 'GET' && url.pathname === '/api/status') {
     const containers = await listContainers(); const store = getStore();
     const watchtowerImport = session.role === 'admin' ? watchtowerImportPreview(containers, store.policies) : null;
-    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: publicSettings(session), registryAuth: { configured: session.role === 'admin' ? configuredRegistries() : [] }, watchtowerImport: watchtowerImport ? { detected: watchtowerImport.detected, changes: watchtowerImport.changes } : null, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
+    const telemetry = ensureTelemetryState(store);
+    return json(res, 200, { version: appVersion, lastScan: store.lastScan, lastScanResult: store.lastScanResult, nextScanAt, scanRunning, settings: publicSettings(session), telemetry: { enabled: telemetry.enabled, installationId: telemetry.installation_id ? `${telemetry.installation_id.slice(0, 8)}…` : null, lastSuccessfulReport: telemetry.last_successful_report, lastAttempt: telemetry.last_attempt, lastStatus: telemetry.last_status, nextAutomaticReport: telemetry.enabled ? nextTelemetryAt || nextAutomaticReport(telemetry) : null }, registryAuth: { configured: session.role === 'admin' ? configuredRegistries() : [] }, watchtowerImport: watchtowerImport ? { detected: watchtowerImport.detected, changes: watchtowerImport.changes } : null, selfUpdate: readSelfUpdateStatus(), events: store.events, containers: containers.map(c => ({
       ...c,
       parsed: parseImage(c.image),
       policy: store.policies[c.name] || { auto: process.env.CP_AUTO_DEFAULT === 'true' },
@@ -242,6 +273,43 @@ async function api(req, res, url, session) {
     addEvent({ type: 'settings-changed', actor: session.username, result: 'success', message: `Intervall ${intervalMinutes} min` });
     return json(res, 200, { settings: getStore().settings, nextScanAt });
   }
+  if (req.method === 'GET' && url.pathname === '/api/telemetry/preview') {
+    try {
+      if (!ensureTelemetryState(getStore()).installation_id) return json(res, 409, { error: 'Telemetrie muss zuerst aktiviert werden' });
+      return json(res, 200, { payload: await telemetryPayload() });
+    } catch { return json(res, 503, { error: 'Telemetrie-Vorschau konnte nicht erstellt werden' }); }
+  }
+  if (req.method === 'POST' && url.pathname === '/api/telemetry/settings') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const data = await body(req); const state = ensureTelemetryState(getStore());
+    if (data.enabled === true) enableTelemetry(getStore()); else state.enabled = false;
+    saveStore(); scheduleTelemetry(data.enabled === true);
+    return json(res, 200, { enabled: ensureTelemetryState(getStore()).enabled });
+  }
+  if (req.method === 'POST' && url.pathname === '/api/telemetry/send') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    if (!ensureTelemetryState(getStore()).enabled) return json(res, 409, { error: 'Telemetrie ist deaktiviert' });
+    const result = await reportTelemetry(); scheduleTelemetry();
+    return json(res, result.ok ? 200 : 502, result.ok ? { status: 'successful' } : { error: result.error });
+  }
+  if (req.method === 'POST' && url.pathname === '/api/telemetry/reset') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    resetTelemetryIdentity(getStore()); saveStore(); scheduleTelemetry(true);
+    return json(res, 200, { ok: true });
+  }
+  if (req.method === 'DELETE' && url.pathname === '/api/telemetry/data') {
+    if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
+    const state = ensureTelemetryState(getStore());
+    if (!state.installation_id || !state.delete_token) return json(res, 404, { error: 'Keine Telemetrie-Identität vorhanden' });
+    try {
+      const endpoint = new URL(telemetryUrl());
+      endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/${state.installation_id}`;
+      const response = await fetch(endpoint, { method: 'DELETE', headers: { authorization: `Bearer ${state.delete_token}` }, signal: AbortSignal.timeout(8_000) });
+      if (!response.ok && response.status !== 404) throw new Error('delete_failed');
+      resetTelemetryIdentity(getStore()); saveStore(); scheduleTelemetry();
+      return json(res, 200, { ok: true });
+    } catch { return json(res, 502, { error: 'Serverdaten konnten nicht gelöscht werden' }); }
+  }
   if (req.method === 'GET' && url.pathname === '/api/users') {
     if (session.role !== 'admin') return json(res, 403, { error: 'Adminrechte erforderlich' });
     return json(res, 200, { users: Object.entries(getStore().users).map(([name, value]) => publicUser(name, value)) });
@@ -259,6 +327,7 @@ async function api(req, res, url, session) {
     const known = new Set(preview.entries.map(entry => entry.id));
     if (data.selectedIds.some(id => !known.has(id))) return json(res, 400, { error: 'Auswahl enthält unbekannte Container' });
     const imported = applyWatchtowerImport(preview, data.selectedIds, getStore().policies);
+    if (imported.length) ensureTelemetryState(getStore()).watchtower_import_used = true;
     saveStore();
     for (const entry of imported) addEvent({ type: 'watchtower-policy-imported', actor: session.username, container: entry.name, image: entry.image, result: 'success', message: `Automatic updates ${entry.proposedAuto ? 'enabled' : 'disabled'} (${entry.reason})` });
     addEvent({ type: 'watchtower-import-complete', actor: session.username, result: 'success', message: `${imported.length} policies imported` });
@@ -319,6 +388,7 @@ async function api(req, res, url, session) {
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: updateType, actor: session.username };
       addEvent({ type: updateType, actor: session.username, container: current.name, image: target, result: 'success' });
       addEvent({ type: 'update-successful', actor: session.username, container: current.name, image: target, result: 'success', message: 'Manual update completed' });
+      incrementTelemetryCounter(getStore(), 'successful_updates'); saveStore();
       return replaced;
     });
     return json(res, 200, result);
@@ -340,6 +410,7 @@ async function api(req, res, url, session) {
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
       addEvent({ type: 'rollback', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Wiederhergestellt: ${checkpoint.displayImage}` });
       addEvent({ type: 'rollback-successful', actor: session.username, container: current.name, image: checkpoint.image, result: 'success', message: `Restored ${checkpoint.displayImage}` });
+      incrementTelemetryCounter(getStore(), 'manual_rollbacks'); saveStore();
       return replaced;
     });
     return json(res, 200, result);
@@ -383,4 +454,5 @@ server.listen(port, '0.0.0.0', () => console.log(`Container Pilot lauscht per ${
 setTimeout(async () => {
   if (getStore().settings.enabled) await scanAll();
   scheduleNextScan();
+  scheduleTelemetry(true);
 }, 3_000);

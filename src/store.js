@@ -2,11 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const file = process.env.CP_STORE_FILE || '/data/state.json';
-let state = { policies: {}, scans: {}, events: [], users: {}, lastScan: null, lastScanResult: null, lastUpdates: {}, rollbacks: {}, settings: null };
+export const defaultTelemetryState = () => ({
+  enabled: false, installation_id: null, delete_token: null,
+  last_successful_report: null, last_attempt: null, last_status: null,
+  successful_updates: 0, failed_updates: 0, automatic_rollbacks: 0,
+  manual_rollbacks: 0, watchtower_import_used: false,
+});
+let state = { policies: {}, scans: {}, events: [], users: {}, lastScan: null, lastScanResult: null, lastUpdates: {}, rollbacks: {}, settings: null, telemetry: defaultTelemetryState() };
 let eventListener = null;
 
 export function loadStore() {
-  try { state = { ...state, ...JSON.parse(fs.readFileSync(file, 'utf8')) }; } catch (e) {
+  try {
+    const loaded = JSON.parse(fs.readFileSync(file, 'utf8'));
+    state = { ...state, ...loaded, telemetry: { ...defaultTelemetryState(), ...(loaded.telemetry || {}) } };
+  } catch (e) {
     if (e.code !== 'ENOENT') console.error('Store konnte nicht geladen werden', e);
   }
   return state;

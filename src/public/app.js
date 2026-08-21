@@ -10,6 +10,7 @@ let authRevision = 0;
 let manualScanPending = false;
 let selfUpdateData = null;
 let watchtowerPreview = null;
+const displayTime = (value) => value ? new Date(value).toLocaleString(locale()) : t('notAvailable');
 
 async function api(path, options = {}) {
   const requestAuthRevision = authRevision;
@@ -54,6 +55,21 @@ $('#scan').onclick = async () => {
 $('#containersButton').onclick = () => showView('containers');
 $('#eventsButton').onclick = async () => { await load(); showView('events'); };
 $('#refreshEvents').onclick = load;
+function renderTelemetry() {
+  const state = currentStatus.telemetry;
+  $('#telemetryEnabled').checked = state.enabled;
+  $('#telemetryToggleRow').hidden = currentUser.role !== 'admin';
+  $('#sendTelemetry').hidden = currentUser.role !== 'admin'; $('#resetTelemetry').hidden = currentUser.role !== 'admin'; $('#deleteTelemetry').hidden = currentUser.role !== 'admin';
+  $('#sendTelemetry').disabled = !state.enabled;
+  $('#telemetryStatus').innerHTML = `<span>${esc(t('telemetryStatus'))}</span><strong>${esc(t(state.enabled ? 'telemetryEnabled' : 'telemetryDisabled'))}</strong><span>${esc(t('installationId'))}</span><strong>${esc(state.installationId || t('notAvailable'))}</strong><span>${esc(t('lastReport'))}</span><strong>${esc(displayTime(state.lastSuccessfulReport))}</strong><span>${esc(t('lastAttempt'))}</span><strong>${esc(displayTime(state.lastAttempt))}${state.lastStatus ? ` · ${esc(state.lastStatus)}` : ''}</strong><span>${esc(t('nextReport'))}</span><strong>${esc(displayTime(state.nextAutomaticReport))}</strong>`;
+}
+$('#telemetryButton').onclick = () => { renderTelemetry(); $('#telemetryPreview').hidden = true; $('#telemetryNotice').textContent = ''; $('#telemetryDialog').showModal(); };
+document.querySelector('[data-close-telemetry]').onclick = () => $('#telemetryDialog').close();
+$('#telemetryEnabled').onchange = async (event) => { try { await api('/api/telemetry/settings', { method: 'POST', body: JSON.stringify({ enabled: event.target.checked }) }); await load(); renderTelemetry(); $('#telemetryNotice').textContent = t('telemetrySaved'); } catch (error) { $('#telemetryNotice').textContent = t('error', { message: error.message }); } };
+$('#previewTelemetry').onclick = async () => { try { const data = await api('/api/telemetry/preview'); $('#telemetryPreview').textContent = JSON.stringify(data.payload, null, 2); $('#telemetryPreview').hidden = false; } catch (error) { $('#telemetryNotice').textContent = t('error', { message: error.message }); } };
+$('#sendTelemetry').onclick = async () => { try { await api('/api/telemetry/send', { method: 'POST', body: '{}' }); await load(); renderTelemetry(); $('#telemetryNotice').textContent = t('actionSuccess'); } catch (error) { await load(); renderTelemetry(); $('#telemetryNotice').textContent = t('error', { message: error.message }); } };
+$('#resetTelemetry').onclick = () => confirmAction(t('telemetryResetTitle'), t('telemetryResetConfirm'), async () => { await api('/api/telemetry/reset', { method: 'POST', body: '{}' }); $('#telemetryDialog').close(); await load(); });
+$('#deleteTelemetry').onclick = () => confirmAction(t('telemetryDeleteTitle'), t('telemetryDeleteConfirm'), async () => { await api('/api/telemetry/data', { method: 'DELETE', body: '{}' }); $('#telemetryDialog').close(); await load(); });
 $('#confirmGo').onclick = async () => {
   if (!pending) return; const fn = pending; pending = null;
   try { $('#notice').textContent = t('actionRunning'); await fn(); $('#notice').textContent = t('actionSuccess'); setTimeout(load, 1000); }
