@@ -25,8 +25,12 @@ test('payload contains only aggregated allow-listed data', async () => {
 
 test('preview builder output exactly equals transmitted payload', async () => {
   const store = baseStore(); enableTelemetry(store); const preview = await buildTelemetryPayload({ store, version: '1.0.0', dockerInfo, containers, inspect, registries: [] }); let transmitted;
-  const result = await sendTelemetry({ store, buildPayload: async () => preview, url: 'http://localhost:3090/api/v1/telemetry', fetchImpl: async (_url, options) => { transmitted = JSON.parse(options.body); return { ok: true, json: async () => ({ status: 'accepted' }) }; } });
+  const now = new Date('2026-08-21T14:20:00.000Z');
+  const result = await sendTelemetry({ store, buildPayload: () => buildTelemetryPayload({ store, version: '1.0.0', dockerInfo, containers, inspect, registries: [] }), url: 'http://localhost:3090/api/v1/telemetry', now: () => now, fetchImpl: async (_url, options) => { transmitted = JSON.parse(options.body); return { ok: true, json: async () => ({ status: 'accepted' }) }; } });
   assert.equal(result.ok, true); assert.deepEqual(transmitted, preview);
+  assert.equal(store.telemetry.last_attempt, now.toISOString());
+  assert.equal(store.telemetry.last_successful_report, now.toISOString());
+  assert.equal(store.telemetry.last_status, 'successful');
 });
 
 test('tracker failures are fail-open and reduced to safe statuses', async () => {

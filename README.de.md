@@ -5,7 +5,7 @@
   <h1>Docker Update Manager – Container Pilot</h1>
   <p><strong>Moderne deutsche Weboberfläche zur kontrollierten Prüfung und Installation von Docker-Image-Updates.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC11" src="https://img.shields.io/badge/Version-0.9.0--rc.11-d97706">
+    <img alt="Version 0.9.0 RC12" src="https://img.shields.io/badge/Version-0.9.0--rc.12-d97706">
     <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white">
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="Oberfläche Deutsch" src="https://img.shields.io/badge/Oberfläche-Deutsch-d97706">
@@ -18,7 +18,7 @@
 
 Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist. In der Weboberfläche kann bewusst zwischen einem Update des bestehenden Tags und einem Wechsel auf `latest` entschieden werden. Die Automatik wechselt niemals selbstständig den Tag.
 
-> **Projektstatus:** Version 0.9.0-rc.11 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren, Self-Updates und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
+> **Projektstatus:** Version 0.9.0-rc.12 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren, Self-Updates und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
 
 ## Einblick
 
