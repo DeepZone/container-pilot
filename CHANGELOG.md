@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.9.0-rc.10
+
+- Restored an anonymized product dashboard preview to the English and German README files.
+
 ## 0.9.0-rc.9
 
 - Added optional native HTTPS with file-based certificate and private-key secrets, automatic Secure session cookies, TLS-aware health checks, and a dedicated Compose override.
