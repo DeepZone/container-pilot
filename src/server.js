@@ -3,7 +3,7 @@ import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage, removeUnusedImage } from './docker.js';
+import { listContainers, replaceContainer, parseImage, localImageDigest, digestReference, tagImage, removeUnusedImage, resolveRollbackImage } from './docker.js';
 import { inspectRemote } from './registry.js';
 import { loadStore, getStore, saveStore, addEvent, setEventListener } from './store.js';
 import { hashPassword, verifyPassword, createSession, readSession, destroySession, destroyUserSessions, sessionCookie, clearSessionCookie } from './auth.js';
@@ -171,7 +171,7 @@ async function scanAll(trigger = 'scheduled', actor = null) {
             if (!current) throw new Error('Container nicht mehr vorhanden');
             const currentLocalDigest = await localImageDigest(current.imageId, current.image);
             if (currentLocalDigest === remote.currentDigest) return;
-            const rollback = { image: digestReference(current.image, currentLocalDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+            const rollback = { image: digestReference(current.image, currentLocalDigest), imageId: current.imageId, displayImage: current.image, createdAt: new Date().toISOString() };
             if (!rollback.image) throw new Error('Rollback-Punkt konnte nicht erstellt werden');
             addEvent({ type: 'update-started', container: c.name, image: c.image, result: 'success', message: 'Automatic update started' });
             try { await replaceContainer(current.id, current.image); }
@@ -377,7 +377,7 @@ async function api(req, res, url, session) {
       const parsed = parseImage(current.image); const target = data.target === 'latest' ? `${parsed.registry === 'docker.io' ? '' : `${parsed.registry}/`}${parsed.repository}:latest` : current.image;
       if (data.target === 'latest' && !(await inspectRemote(current.image)).latestExists) throw Object.assign(new Error('Tag latest existiert nicht'), { status: 409 });
       const currentDigest = await localImageDigest(current.imageId, current.image);
-      const rollback = { image: digestReference(current.image, currentDigest), displayImage: current.image, createdAt: new Date().toISOString() };
+      const rollback = { image: digestReference(current.image, currentDigest), imageId: current.imageId, displayImage: current.image, createdAt: new Date().toISOString() };
       if (!rollback.image) throw Object.assign(new Error('Das aktuelle Image besitzt keinen auflösbaren Digest; Rollback-Punkt kann nicht erstellt werden'), { status: 409 });
       addEvent({ type: 'update-started', actor: session.username, container: current.name, image: target, result: 'success', message: data.target === 'latest' ? 'Switch to latest started' : 'Manual update started' });
       let replaced;
@@ -400,11 +400,12 @@ async function api(req, res, url, session) {
     const result = await withContainerLock(selected.name, 'Rollback', async () => {
       const current = (await listContainers()).find(c => c.name === selected.name); if (!current) throw Object.assign(new Error('Container nicht mehr vorhanden'), { status: 404 });
       const checkpoint = getStore().rollbacks?.[current.name]; if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
+      const rollbackImage = await resolveRollbackImage(checkpoint);
       const displayTarget = checkpoint.displayImage && !checkpoint.displayImage.includes('@') ? checkpoint.displayImage : null;
-      if (displayTarget) await tagImage(checkpoint.image, displayTarget);
+      if (displayTarget) await tagImage(rollbackImage, displayTarget);
       addEvent({ type: 'rollback-started', actor: session.username, container: current.name, image: checkpoint.image, result: 'success' });
       let replaced;
-      try { replaced = await replaceContainer(current.id, displayTarget || checkpoint.image, { pull: false }); }
+      try { replaced = await replaceContainer(current.id, displayTarget || rollbackImage, { pull: false }); }
       catch (error) { recordActionFailure('rollback-failed', session, current.name, checkpoint.image, error); throw error; }
       delete getStore().rollbacks[current.name];
       getStore().lastUpdates[current.name] = { at: new Date().toISOString(), mode: 'manual', type: 'rollback', actor: session.username };
@@ -422,7 +423,7 @@ async function api(req, res, url, session) {
     const result = await withContainerLock(selected.name, 'Rollback verwerfen', async () => {
       const checkpoint = getStore().rollbacks?.[selected.name];
       if (!checkpoint?.image) throw Object.assign(new Error('Kein Rollback-Punkt vorhanden'), { status: 409 });
-      const removed = await removeUnusedImage(checkpoint.image);
+      const removed = await removeUnusedImage(await resolveRollbackImage(checkpoint));
       delete getStore().rollbacks[selected.name];
       saveStore();
       addEvent({ type: 'rollback-discarded', actor: session.username, container: selected.name, image: checkpoint.image, result: 'success', message: 'Rollback-Punkt und altes Image entfernt' });
