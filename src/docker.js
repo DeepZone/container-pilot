@@ -74,6 +74,29 @@ export async function removeUnusedImage(imageReference) {
   return { imageId: image.Id, removed: true };
 }
 
+export function findImageIdByDigest(images, digest) {
+  if (!digest) return null;
+  return images.find(image => (image.RepoDigests || []).some(reference => reference.endsWith(`@${digest}`)))?.Id || null;
+}
+
+export async function resolveRollbackImage(checkpoint) {
+  if (!checkpoint?.imageId && !checkpoint?.image) throw new Error('Rollback-Punkt enthält keine Image-Referenz');
+  let missingImageError;
+  for (const reference of [checkpoint.imageId, checkpoint.image].filter(Boolean)) {
+    try {
+      const image = await dockerRequest('GET', `/images/${encodeURIComponent(reference)}/json`);
+      return image.Id;
+    } catch (error) {
+      if (!/Docker GET .*: 404 /.test(error.message)) throw error;
+      missingImageError = error;
+    }
+  }
+  const digest = checkpoint.image?.split('@')[1];
+  const imageId = findImageIdByDigest(await dockerRequest('GET', '/images/json?all=1&digests=1'), digest);
+  if (imageId) return imageId;
+  throw missingImageError || new Error('Das lokale Rollback-Image ist nicht mehr vorhanden');
+}
+
 export function digestReference(image, digest) {
   if (!digest) return null;
   const { registry, repository } = parseImage(image);

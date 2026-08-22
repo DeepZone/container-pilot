@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Removed the privately operated telemetry receiver and internal statistics dashboard from the public source repository. Client-side opt-in telemetry remains unchanged.
+- Fixed rollback and rollback disposal when a locally retained image digest belongs to a different repository alias. New rollback points retain the Docker image ID, while RC12 checkpoints can recover the image by digest.
 
 ## 0.9.0-rc.12
 
