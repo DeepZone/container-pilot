@@ -5,7 +5,7 @@
   <h1>Docker Update Manager – Container Pilot</h1>
   <p><strong>Moderne deutsche Weboberfläche zur kontrollierten Prüfung und Installation von Docker-Image-Updates.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC12" src="https://img.shields.io/badge/Version-0.9.0--rc.12-d97706">
+    <img alt="Version 0.9.0 RC13" src="https://img.shields.io/badge/Version-0.9.0--rc.13-d97706">
     <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-339933?logo=nodedotjs&logoColor=white">
     <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="Oberfläche Deutsch" src="https://img.shields.io/badge/Oberfläche-Deutsch-d97706">
@@ -18,7 +18,7 @@
 
 Der Schwerpunkt liegt auf einem nachvollziehbaren Update-Workflow mit **konfigurierbaren Prüfintervallen, Freigabe pro Container, optionaler Sofortinstallation und automatischem Rollback**. Bei Images mit einem festen Tag prüft Container Pilot zusätzlich, ob ein `latest`-Tag vorhanden ist. In der Weboberfläche kann bewusst zwischen einem Update des bestehenden Tags und einem Wechsel auf `latest` entschieden werden. Die Automatik wechselt niemals selbstständig den Tag.
 
-> **Projektstatus:** Version 0.9.0-rc.12 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren, Self-Updates und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
+> **Projektstatus:** Version 0.9.0-rc.13 ist ein Release Candidate. Die Update-Engine besitzt Healthcheck-Validierung, Aktionssperren, Self-Updates und Docker-Integrationstests. Vor dem Stable-Release ist ein kontrollierter Praxistest mit den eigenen Stacks vorgesehen.
 
 ## Einblick
 
@@ -205,7 +205,7 @@ Die ausführliche Dokumentation wird zunächst auf Englisch unter [`docs/`](docs
 
 ### Beim Testen des Release Candidates helfen
 
-RC12 auf einer unkritischen Arbeitslast ausführen und die Erfahrungen teilen: Der [Testleitfaden](docs/testing.md) beschreibt die wichtigsten Szenarien. Reproduzierbare Fehler bitte über [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose) melden; allgemeine Testergebnisse und Fragen gehören in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
+RC13 auf einer unkritischen Arbeitslast ausführen und die Erfahrungen teilen: Der [Testleitfaden](docs/testing.md) beschreibt die wichtigsten Szenarien. Reproduzierbare Fehler bitte über [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose) melden; allgemeine Testergebnisse und Fragen gehören in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
 
 ## Lizenz und Copyright
 

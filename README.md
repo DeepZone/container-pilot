@@ -7,7 +7,7 @@
   <p>A Docker update manager with a Web UI, per-container policies, health checks, and automatic rollback.</p>
   <p><strong>A safer Watchtower alternative focused on control and recovery.</strong></p>
   <p>
-    <img alt="Version 0.9.0 RC12" src="https://img.shields.io/badge/version-0.9.0--rc.12-d97706">
+    <img alt="Version 0.9.0 RC13" src="https://img.shields.io/badge/version-0.9.0--rc.13-d97706">
     <img alt="Docker Compose" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white">
     <img alt="AMD64 and ARM64" src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-2496ed">
     <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-7c3aed">
@@ -119,7 +119,7 @@ Published multi-architecture images are available from:
 ghcr.io/deepzone/container-pilot
 ```
 
-- Complete version tags such as `0.9.0-rc.12` are fixed release references and must never be reused.
+- Complete version tags such as `0.9.0-rc.13` are fixed release references and must never be reused.
 - Release candidates use the `rc` channel once published by the release workflow.
 - `latest`, major, and minor aliases are reserved for stable releases.
 - Successful builds from `main` use the moving `edge` tag and a commit-specific `sha-*` tag. They are development builds, not releases.
@@ -156,7 +156,7 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before openin
 
 ### Help test the release candidate
 
-Run RC12 on a non-critical workload and share what you learn. Use the [testing guide](docs/testing.md), report reproducible defects through [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose), and share broader test results or questions in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
+Run RC13 on a non-critical workload and share what you learn. Use the [testing guide](docs/testing.md), report reproducible defects through [GitHub Issues](https://github.com/DeepZone/container-pilot/issues/new/choose), and share broader test results or questions in [GitHub Discussions](https://github.com/DeepZone/container-pilot/discussions).
 
 Do not publish credentials, tokens, private image names, internal addresses, or complete state files in issues. Report vulnerabilities according to [SECURITY.md](SECURITY.md).
 
