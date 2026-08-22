@@ -2,13 +2,13 @@
 
 [Documentation index](../README.md) · [Installation](installation.md)
 
-Container Pilot uses [Semantic Versioning](https://semver.org/). Release candidates use tags such as `v0.9.0-rc.12`; stable releases use tags such as `v1.0.0`.
+Container Pilot uses [Semantic Versioning](https://semver.org/). Release candidates use tags such as `v0.9.0-rc.13`; stable releases use tags such as `v1.0.0`.
 
 ## Channels
 
 | Git tag | Published image tags | Intended use |
 | --- | --- | --- |
-| `v0.9.0-rc.12` | `0.9.0-rc.12`, `rc` | controlled release-candidate testing |
+| `v0.9.0-rc.13` | `0.9.0-rc.13`, `rc` | controlled release-candidate testing |
 | `v1.2.3` | `1.2.3`, `1.2`, `1`, `latest`, `stable` | stable installations |
 | push to `main` | `edge`, `sha-<commit>` | development testing only |
 
